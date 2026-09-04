@@ -13,7 +13,7 @@ import { useCustomerOutstanding } from "../../../hooks/useCustomerOutstanding";
 
 const CustomerOutstandingPage = () => {
   const { customerId } = useParams();
-
+//
   const {
     customer,
     orders,
