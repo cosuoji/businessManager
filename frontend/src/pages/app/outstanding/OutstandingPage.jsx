@@ -60,24 +60,26 @@ const OutstandingPage = () => {
   return (
     <div className="space-y-6 ">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between pt-5">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl command-black">
-              <Wallet size={20} />
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-command-green">
+                Debt Tracker
+            </p>
+
+            <div className="mt-1 flex items-center gap-3">
+                <h1 className="font-mono text-2xl font-semibold tracking-tight">
+                   Outstanding
+                </h1>
+
+                <Wallet
+                    size={19}
+                    className="text-command-muted"
+                />
             </div>
 
-            <div>
-              <h1 className="text-xl font-semibold">
-                Outstanding
-              </h1>
-
-              <p className="mt-0.5 text-sm command-muted">
-                Track unpaid balances and follow up with
-                customers.
-              </p>
-            </div>
-          </div>
+            <p className="mt-2 text-sm text-command-muted">
+                Who owes me what?
+            </p>
         </div>
 
         <button

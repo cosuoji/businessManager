@@ -24,7 +24,7 @@ const FinalCTA = () => {
                 </p>
 
                 <div className="mt-9 flex justify-center">
-                    <Button href="#signup">
+                    <Button href="/register">
                         Start for free →
                     </Button>
                 </div>

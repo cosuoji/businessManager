@@ -31,7 +31,7 @@ const Hero = () => {
                 </p>
 
                 <div className="mt-9 flex animate-command-fade-up flex-col justify-center gap-3 [animation-delay:300ms] sm:flex-row">
-                    <Button href="#signup">
+                    <Button href="/register">
                         Start for free
                         <span>→</span>
                     </Button>

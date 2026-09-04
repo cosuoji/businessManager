@@ -85,38 +85,15 @@ const UserMenu = () => {
             </button>
 
             {open && (
-                <div className="absolute right-0 top-full z-[0] mt-2 w-56 overflow-hidden rounded-command-md border border-command-border bg-command-surface shadow-2xl">
-                    {/* <div className="border-b border-command-border px-4 py-3">
-                        <p className="truncate text-xs font-medium">
-                            {user?.businessName ||
-                                "Business account"}
-                        </p>
-
-                        <p className="mt-1 truncate text-[11px] text-command-muted">
-                            {user?.email}
-                        </p>
-                    </div>*/}
+              <div className="absolute right-0 top-full z-999 mt-5 w-56 overflow-hidden rounded-command-md border border-command-border bg-command-surface">
 
                     <div className="p-1.5">
-{/*
-                        <Link
-                            to="/receipts"
-                            onClick={() =>
-                                setOpen(false)
-                            }
-                            className="flex items-center gap-3 rounded-command-sm px-3 py-2.5 text-sm text-command-muted transition hover:bg-command-black hover:text-command-white"
-                        >
-                            <Receipt
-                                size={15}
-                            />
-                            Receipt
-                        </Link>*/}
                         <Link
                             to="/invoices"
                             onClick={() =>
                                 setOpen(false)
                             }
-                            className="flex items-center gap-3 rounded-command-sm px-3 py-2.5 text-sm text-command-muted transition hover:bg-command-black hover:text-command-white"
+                            className="flex items-center gap-3 rounded-command-sm px-3 py-2.5 text-xs text-command-muted transition hover:bg-command-black hover:text-command-white"
                         >
                             <ShoppingBag
                                 size={15}
@@ -128,7 +105,7 @@ const UserMenu = () => {
                   onClick={() =>
                       setOpen(false)
                   }
-                  className="flex items-center gap-3 rounded-command-sm px-3 py-2.5 text-sm text-command-muted transition hover:bg-command-black hover:text-command-white"
+                  className="flex items-center gap-3 rounded-command-sm px-3 py-2.5 text-xs text-command-muted transition hover:bg-command-black hover:text-command-white"
               >
                   <Settings
                       size={15}
@@ -145,7 +122,7 @@ const UserMenu = () => {
                             disabled={
                                 loggingOut
                             }
-                            className="flex w-full items-center gap-3 rounded-command-sm px-3 py-2.5 text-sm text-red-400 transition hover:bg-red-500/5 disabled:opacity-50"
+                            className="flex w-full items-center gap-3 rounded-command-sm px-3 py-2.5 text-xs text-red-400 transition hover:bg-red-500/5 disabled:opacity-50"
                         >
                             <LogOut
                                 size={15}
