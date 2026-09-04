@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
 
-import OutstandingCustomerHeader from "../../../components/outstanding/OutstandingCustomerHeader";
+import CustomerHeader from "../../../components/outstanding/CustomerHeader";
 import OutstandingCustomerStats from "../../../components/outstanding/OutstandingCustomerStats";
 import OutstandingOrderTable from "../../../components/outstanding/OutstandingOrderTable";
 
@@ -38,7 +38,7 @@ const CustomerOutstandingPage = () => {
     <div className="space-y-6">
       {/* Header */}
       {customer && (
-        <OutstandingCustomerHeader
+        <CustomerHeader
           customer={customer}
           totalOutstanding={totalOutstanding}
         />

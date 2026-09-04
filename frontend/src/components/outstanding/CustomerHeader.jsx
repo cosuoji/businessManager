@@ -6,7 +6,7 @@ import {
 import { Link } from "react-router-dom";
 import { formatCurrency } from "../payments/paymentUtils";
 
-const OutstandingCustomerHeader = ({
+const CustomerHeader = ({
     customer,
     totalOutstanding,
 }) => {
@@ -78,4 +78,4 @@ const OutstandingCustomerHeader = ({
     );
 };
 
-export default OutstandingCustomerHeader;
+export default CustomerHeader;
