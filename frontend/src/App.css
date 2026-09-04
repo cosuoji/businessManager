@@ -1,0 +1,291 @@
+@import "tailwindcss";
+
+@theme {
+    /* =========================
+       BACKGROUNDS
+    ========================= */
+
+    --color-command-black: #070908;
+    --color-command-surface: #0c100e;
+    --color-command-surface-2: #111612;
+    --color-command-surface-3: #161c18;
+
+    /* =========================
+       TEXT
+    ========================= */
+
+    --color-command-white: #f2f5f1;
+    --color-command-text: #d8ded9;
+    --color-command-muted: #89938c;
+    --color-command-subtle: #5f6962;
+
+    /* =========================
+       BRAND
+    ========================= */
+
+    --color-command-green: #43df88;
+    --color-command-green-dark: #27ad65;
+    --color-command-green-soft: #10291d;
+
+    /* =========================
+       STATUS
+    ========================= */
+
+    --color-command-red: #ff746b;
+    --color-command-yellow: #e7c66a;
+    --color-command-blue: #72a8ff;
+
+    /* =========================
+       BORDERS
+    ========================= */
+
+    --color-command-border: #202721;
+    --color-command-border-light: #2b342e;
+
+    /* =========================
+       TYPOGRAPHY
+    ========================= */
+
+    --font-sans: "Inter", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+
+    /* =========================
+       RADIUS
+    ========================= */
+
+    --radius-command-sm: 6px;
+    --radius-command-md: 10px;
+    --radius-command-lg: 14px;
+    --radius-command-xl: 20px;
+    --radius-command-pill: 999px;
+}
+
+:root {
+    font-family: "Inter", sans-serif;
+
+    color: var(--color-command-white);
+    background: var(--color-command-black);
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-width: 320px;
+    background: var(--color-command-black);
+}
+
+button,
+a {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+::selection {
+    background: var(--color-command-green);
+    color: #061008;
+}
+
+/* =========================
+   GLOBAL ANIMATIONS
+========================= */
+
+@keyframes command-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes command-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.45;
+    }
+}
+
+.animate-command-fade-up {
+    animation: command-fade-up 0.7s ease-out both;
+}
+
+.animate-command-pulse {
+    animation: command-pulse 2.5s ease-in-out infinite;
+}
+
+/* =========================
+   BACKGROUND GRID
+========================= */
+
+.command-grid {
+    background-image:
+        linear-gradient(
+            rgba(255, 255, 255, 0.025) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.025) 1px,
+            transparent 1px
+        );
+
+    background-size: 48px 48px;
+}
+
+/* =========================
+   GLOW
+========================= */
+
+.command-glow {
+    position: absolute;
+    pointer-events: none;
+
+    width: 600px;
+    height: 600px;
+
+    border-radius: 999px;
+
+    background: var(--color-command-green);
+
+    opacity: 0.035;
+
+    filter: blur(100px);
+}
+
+/* =========================
+   SCROLLBAR
+========================= */
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-command-black);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-command-border-light);
+    border-radius: 999px;
+}
+
+/* Custom CSS Overrides for SweetAlert2 */
+.swal2-popup.command-theme-popup {
+  background: var(--color-command-surface);
+  border: 1px solid var(--color-command-border);
+  border-radius: var(--radius-command-lg);
+  font-family: "Inter", sans-serif;
+  color: var(--color-command-text);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+/* Typography & Titles */
+.command-theme-popup .swal2-title {
+  color: var(--color-command-white);
+  font-family: "Inter", sans-serif;
+  font-size: 1.5rem;
+}
+
+.command-theme-popup .swal2-html-container {
+  color: var(--color-command-text);
+}
+
+/* Modifying Icons to Match Theme Status Colors */
+.command-theme-popup .swal2-icon.swal2-success {
+  border-color: var(--color-command-green);
+  color: var(--color-command-green);
+}
+.command-theme-popup .swal2-icon.swal2-success .swal2-success-ring {
+  border: .25em solid rgba(67, 223, 136, .2);
+}
+.command-theme-popup .swal2-icon.swal2-success [class^=swal2-success-line] {
+  background-color: var(--color-command-green);
+}
+
+.command-theme-popup .swal2-icon.swal2-error {
+  border-color: var(--color-command-red);
+  color: var(--color-command-red);
+}
+.command-theme-popup .swal2-icon.swal2-error [class^=swal2-x-mark-line] {
+  background-color: var(--color-command-red);
+}
+
+.command-theme-popup .swal2-icon.swal2-warning {
+  border-color: var(--color-command-yellow);
+  color: var(--color-command-yellow);
+}
+
+.command-theme-popup .swal2-icon.swal2-info {
+  border-color: var(--color-command-blue);
+  color: var(--color-command-blue);
+}
+
+/* Inputs & Forms */
+.command-theme-popup .swal2-input,
+.command-theme-popup .swal2-textarea {
+  background-color: var(--color-command-surface-2) !important;
+  border: 1px solid var(--color-command-border) !important;
+  color: var(--color-command-white) !important;
+  border-radius: var(--radius-command-sm) !important;
+  font-family: "Inter", sans-serif;
+  box-shadow: none !important;
+}
+
+.command-theme-popup .swal2-input:focus,
+.command-theme-popup .swal2-textarea:focus {
+  border-color: var(--color-command-green) !important;
+}
+
+/* Custom Theme Buttons */
+.command-btn {
+  font-family: "Inter", sans-serif !important;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 24px !important;
+  font-size: 0.875rem !important;
+  border-radius: var(--radius-command-md) !important;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.command-confirm-btn {
+  background-color: var(--color-command-green) !important;
+  color: var(--color-command-black) !important;
+}
+
+.command-confirm-btn:hover {
+  background-color: var(--color-command-green-dark) !important;
+}
+
+.command-cancel-btn {
+  background-color: var(--color-command-surface-3) !important;
+  color: var(--color-command-muted) !important;
+  border: 1px solid var(--color-command-border-light) !important;
+}
+
+.command-cancel-btn:hover {
+  background-color: var(--color-command-surface-2) !important;
+  color: var(--color-command-text) !important;
+}

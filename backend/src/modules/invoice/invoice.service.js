@@ -1,0 +1,507 @@
+import mongoose from "mongoose";
+import puppeteer from "puppeteer";
+import crypto from "crypto";
+
+import Order from "../orders/order.model.js";
+import Payment from "../payments/payment.model.js";
+import Customer from "../customers/customer.model.js";
+import User from "../users/user.model.js";
+
+import Counter from "./counter.model.js";
+
+import {
+  generateInvoiceHTML,
+} from "./invoice.template.js";
+
+const generateInvoicePublicToken = () => {
+  return crypto.randomBytes(32).toString("hex");
+};
+
+const generateInvoiceNumber =
+  async () => {
+    const counter =
+      await Counter.findOneAndUpdate(
+        {
+          _id: "invoice",
+        },
+        {
+          $inc: {
+            sequence: 1,
+          },
+        },
+        {
+          new: true,
+          upsert: true,
+        }
+      );
+
+    return `INV-${String(
+      counter.sequence
+    ).padStart(6, "0")}`;
+  };
+
+const getOrCreateInvoiceAccess =
+  async (orderId, userId) => {
+    const existingOrder =
+      await Order.findOne({
+        _id: orderId,
+        userId,
+      })
+        .select(
+          "invoiceNumber invoicePublicToken"
+        )
+        .lean();
+
+    if (
+      existingOrder?.invoiceNumber &&
+      existingOrder?.invoicePublicToken
+    ) {
+      return {
+        invoiceNumber:
+          existingOrder.invoiceNumber,
+        invoicePublicToken:
+          existingOrder.invoicePublicToken,
+      };
+    }
+
+    const invoiceNumber =
+      existingOrder?.invoiceNumber ||
+      await generateInvoiceNumber();
+
+    const invoicePublicToken =
+      existingOrder?.invoicePublicToken ||
+      generateInvoicePublicToken();
+
+    const updatedOrder =
+      await Order.findOneAndUpdate(
+        {
+          _id: orderId,
+          userId,
+        },
+        {
+          $set: {
+            invoiceNumber,
+            invoicePublicToken,
+          },
+        },
+        {
+          new: true,
+        }
+      ).lean();
+
+    return {
+      invoiceNumber:
+        updatedOrder.invoiceNumber,
+      invoicePublicToken:
+        updatedOrder.invoicePublicToken,
+    };
+  };
+
+
+const getPaymentSummary = async (
+  userId,
+  orderId
+) => {
+  const userObjectId =
+    new mongoose.Types.ObjectId(userId);
+
+  const orderObjectId =
+    new mongoose.Types.ObjectId(orderId);
+
+  const result =
+    await Payment.aggregate([
+      {
+        $match: {
+          userId: userObjectId,
+          orderId: orderObjectId,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalPaid: {
+            $sum: "$amount",
+          },
+        },
+      },
+    ]);
+
+  return {
+    totalPaid:
+      result[0]?.totalPaid || 0,
+  };
+};
+
+export const getInvoiceData = async (
+  userId,
+  orderId
+) => {
+  if (
+    !mongoose.Types.ObjectId.isValid(
+      orderId
+    )
+  ) {
+    const error = new Error(
+      "Invalid order ID."
+    );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  const order =
+    await Order.findOne({
+      _id: orderId,
+      userId,
+      isArchived: false,
+    }).lean();
+
+  if (!order) {
+    const error = new Error(
+      "Order not found."
+    );
+
+    error.statusCode = 404;
+
+    throw error;
+  }
+
+  if (order.status === "cancelled") {
+    const error = new Error(
+      "Cannot generate an invoice for a cancelled order."
+    );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  const [
+    customer,
+    user,
+    paymentSummary,
+  ] = await Promise.all([
+    Customer.findOne({
+      _id: order.customerId,
+      userId,
+      isArchived: false,
+    })
+      .select(
+        "name phone email address"
+      )
+      .lean(),
+
+    User.findById(userId)
+      .select(
+        "name email phone businessName businessPhone businessAddress currency"
+      )
+      .lean(),
+
+    getPaymentSummary(
+      userId,
+      order._id
+    ),
+  ]);
+
+  if (!customer) {
+    const error = new Error(
+      "Customer not found."
+    );
+
+    error.statusCode = 404;
+
+    throw error;
+  }
+
+  if (!user) {
+    const error = new Error(
+      "Business owner not found."
+    );
+
+    error.statusCode = 404;
+
+    throw error;
+  }
+
+  const {
+    invoiceNumber,
+    invoicePublicToken,
+  } =
+    await getOrCreateInvoiceAccess(
+      order._id,
+      userId
+    );
+  const totalPaid =
+      paymentSummary.totalPaid;
+
+  const balance = Math.max(
+      order.total - totalPaid,
+      0
+  );
+
+  let paymentStatus = "unpaid";
+
+  if (totalPaid >= order.total) {
+      paymentStatus = "paid";
+  } else if (totalPaid > 0) {
+      paymentStatus = "partially_paid";
+  }
+
+  return {
+      invoiceNumber,
+      invoicePublicToken,
+
+      business: {
+          name: user.businessName,
+          phone:
+              user.businessPhone ||
+              user.phone,
+          email: user.email,
+          address:
+              user.businessAddress || "",
+      },
+
+      customer: {
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email || "",
+          address:
+              customer.address || "",
+      },
+
+      order: {
+          orderNumber:
+              order.orderNumber,
+          date: order.createdAt,
+          dueDate:
+              order.dueDate || null,
+      },
+
+      items: order.items.map(
+          (item) => ({
+              name: item.name,
+              quantity: item.quantity,
+              sellingPrice:
+                  item.sellingPrice,
+              total: item.total,
+          })
+      ),
+
+      subtotal: order.subtotal,
+
+      discount:
+          order.discount || 0,
+
+      total: order.total,
+      totalPaid,
+      balance,
+      paymentStatus,
+      currency:
+          user.currency || "NGN",
+
+      notes:
+          order.notes || "",
+  };
+};
+
+export const generateInvoicePDF =
+  async (invoiceData) => {
+    const html =
+      generateInvoiceHTML(
+        invoiceData
+      );
+
+    const browser =
+      await puppeteer.launch({
+        headless: true,
+      });
+
+    try {
+      const page =
+        await browser.newPage();
+
+      await page.setContent(html, {
+        waitUntil: "networkidle0",
+      });
+
+      return await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: {
+          top: "20mm",
+          right: "15mm",
+          bottom: "20mm",
+          left: "15mm",
+        },
+      });
+    } finally {
+      await browser.close();
+    }
+  };
+
+export const getInvoices = async (
+  userId,
+  {
+    page = 1,
+    limit = 20,
+    search = "",
+    dateFrom,
+    dateTo,
+  } = {}
+) => {
+  const skip =
+    (Number(page) - 1) *
+    Number(limit);
+
+  const filter = {
+    userId,
+    isArchived: false,
+    invoiceNumber: {
+      $exists: true,
+      $ne: "",
+    },
+  };
+
+  if (search?.trim()) {
+    filter.$or = [
+      {
+        invoiceNumber: {
+          $regex: search.trim(),
+          $options: "i",
+        },
+      },
+      {
+        orderNumber: {
+          $regex: search.trim(),
+          $options: "i",
+        },
+      },
+    ];
+  }
+
+  if (dateFrom || dateTo) {
+    filter.createdAt = {};
+
+    if (dateFrom) {
+      filter.createdAt.$gte =
+        new Date(`${dateFrom}T00:00:00.000Z`);
+    }
+
+    if (dateTo) {
+      filter.createdAt.$lte =
+        new Date(`${dateTo}T23:59:59.999Z`);
+    }
+  }
+
+  const [
+    orders,
+    total,
+  ] = await Promise.all([
+    Order.find(filter)
+      .populate(
+        "customerId",
+        "name phone email"
+      )
+      .select(
+        "invoiceNumber orderNumber customerId total paymentStatus createdAt dueDate"
+      )
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+
+    Order.countDocuments(filter),
+  ]);
+
+  return {
+    invoices: orders,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages: Math.ceil(
+        total / Number(limit)
+      ),
+      hasNextPage:
+        Number(page) <
+        Math.ceil(
+          total / Number(limit)
+        ),
+      hasPreviousPage:
+        Number(page) > 1,
+    },
+  };
+};
+
+
+export const getInvoiceAccess = async (
+  userId,
+  orderId
+) => {
+  if (
+    !mongoose.Types.ObjectId.isValid(
+      orderId
+    )
+  ) {
+    const error = new Error(
+      "Invalid order ID."
+    );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  const {
+    invoiceNumber,
+    invoicePublicToken,
+  } =
+    await getOrCreateInvoiceAccess(
+      orderId,
+      userId
+    );
+
+  return {
+    invoiceNumber,
+    invoicePublicToken,
+  };
+};
+
+export const getPublicInvoiceData =
+  async (token) => {
+    if (!token) {
+      const error = new Error(
+        "Invoice link is invalid."
+      );
+
+      error.statusCode = 400;
+
+      throw error;
+    }
+
+    const order =
+      await Order.findOne({
+        invoicePublicToken: token,
+        isArchived: false,
+      })
+        .select("_id userId")
+        .lean();
+
+    if (!order) {
+      const error = new Error(
+        "Invoice not found or the link is no longer valid."
+      );
+
+      error.statusCode = 404;
+
+      throw error;
+    }
+
+    return getInvoiceData(
+      order.userId.toString(),
+      order._id.toString()
+    );
+  };
