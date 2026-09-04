@@ -4,9 +4,9 @@ import {
 } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
 
+import OutstandingCustomerHeader from "../../../components/outstanding/OutstandingCustomerHeader";
 import OutstandingCustomerStats from "../../../components/outstanding/OutstandingCustomerStats";
 import OutstandingOrderTable from "../../../components/outstanding/OutstandingOrderTable";
-import OutstandingCustomerHeader from "../../../components/outstanding/OutstandingCustomerHeader";
 
 
 import { useCustomerOutstanding } from "../../../hooks/useCustomerOutstanding";
