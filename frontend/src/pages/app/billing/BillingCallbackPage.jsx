@@ -19,6 +19,8 @@ import {
 } from "../../../services/billing";
 
 import { getCurrentUser } from "../../../services/auth";
+import { useAuth } from "../../../context/AuthContext";
+
 
 const BillingCallbackPage =
     () => {
