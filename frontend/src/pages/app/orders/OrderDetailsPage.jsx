@@ -2,14 +2,16 @@ import {
     ArrowLeft,
     Archive,
     CalendarDays,
-  FileText,
-  CreditCard,
+    FileText,
+    CreditCard,
     UserRound,
-  Pencil,
-  MessageCircle,
+    Pencil,
+    MessageCircle,
 } from "lucide-react";
 
-import { useState } from "react";
+import {
+    useState,
+} from "react";
 
 import {
     Link,
@@ -18,19 +20,41 @@ import {
 } from "react-router-dom";
 
 import useOrder from "../../../hooks/useOrder";
-import { updateOrder } from "../../../services/orders";
-import Swal from 'sweetalert2';
-import { formatCurrency } from "../../../components/payments/paymentUtils";
+
+import {
+    updateOrder,
+} from "../../../services/orders";
+
+import Swal from "sweetalert2";
+
+import {
+    formatCurrency,
+} from "../../../components/payments/paymentUtils";
 
 import useOrderPayments from "../../../hooks/useOrderPayments";
+
 import EditOrderModal from "./EditOrderModal";
-import { recordPayment, deletePayment } from "../../../services/payments";
+
+import {
+    recordPayment,
+    deletePayment,
+} from "../../../services/payments";
+
 import PaymentSummary from "../../../components/payments/PaymentSummary";
+
 import PaymentHistory from "../../../components/payments/PaymentHistory";
+
 import RecordPaymentModal from "../../../components/payments/RecordPaymentModal";
+
 import OrderStatusBadge from "../../../components/orders/OrderStatusBadge";
+
 import PaymentStatusBadge from "../../../components/orders/PaymentStatusBadge";
+
 import WhatsAppModal from "../../../components/whatsapp/WhatsAppModal";
+
+import {
+    useUsage,
+} from "../../../hooks/useUsage";
 
 const formatAmount = (amount) =>
     `₦${Number(amount || 0).toLocaleString(
@@ -42,195 +66,241 @@ const formatAmount = (amount) =>
     )}`;
 
 const OrderDetailsPage = () => {
-    const { id } =
-        useParams();
+    const {
+        id,
+    } = useParams();
 
     const navigate =
         useNavigate();
 
-    const [paymentModalOpen, setPaymentModalOpen] =
-        useState(false);
+    const [
+        paymentModalOpen,
+        setPaymentModalOpen,
+    ] = useState(false);
 
-    const [recordingPayment, setRecordingPayment] =
-        useState(false);
+    const [
+        recordingPayment,
+        setRecordingPayment,
+    ] = useState(false);
 
-    const [paymentError, setPaymentError] =
-        useState(null);
+    const [
+        paymentError,
+        setPaymentError,
+    ] = useState(null);
 
-    const [deletingPaymentId, setDeletingPaymentId] =
-        useState(null);
+    const [
+        deletingPaymentId,
+        setDeletingPaymentId,
+    ] = useState(null);
 
-    const [paymentDeleteError, setPaymentDeleteError] =
-        useState(null);
+    const [
+        paymentDeleteError,
+        setPaymentDeleteError,
+    ] = useState(null);
 
-    const [whatsappModalOpen, setWhatsappModalOpen] =
-        useState(false);
+    const [
+        whatsappModalOpen,
+        setWhatsappModalOpen,
+    ] = useState(false);
 
-  const {
+    const {
         order,
         loading,
         error,
         refetch,
     } = useOrder(id);
 
-  const {
-      payments,
-      summary,
-      loading: paymentsLoading,
-      error: paymentsError,
-      refetch: refetchPayments,
-  } = useOrderPayments(id);
+    const {
+        payments,
+        summary,
+        loading: paymentsLoading,
+        error: paymentsError,
+        refetch: refetchPayments,
+    } = useOrderPayments(id);
 
-  const [editModalOpen, setEditModalOpen] =
-      useState(false);
+    const {
+        usage,
+    } = useUsage();
 
-  const [updatingOrder, setUpdatingOrder] =
-      useState(false);
+    const [
+        editModalOpen,
+        setEditModalOpen,
+    ] = useState(false);
 
-  const [updateError, setUpdateError] =
-      useState(null);
+    const [
+        updatingOrder,
+        setUpdatingOrder,
+    ] = useState(false);
 
+    const [
+        updateError,
+        setUpdateError,
+    ] = useState(null);
 
-  const handleUpdateOrder = async (
-      orderData
-  ) => {
-      setUpdatingOrder(true);
-      setUpdateError(null);
+    const invoiceUsage =
+        usage?.invoices;
 
-      try {
-          await updateOrder(
-              id,
-              orderData
-          );
+    const invoiceLimitReached =
+        invoiceUsage &&
+        invoiceUsage.limit !== null &&
+        invoiceUsage.used >=
+            invoiceUsage.limit;
 
-          setEditModalOpen(false);
+    const hasInvoice =
+        Boolean(
+            order?.invoiceNumber
+        );
 
-          await Promise.all([
-              refetch(),
-              refetchPayments(),
-          ]);
+    const canCreateInvoice =
+        hasInvoice ||
+        !invoiceLimitReached;
 
-          await Swal.fire({
-              icon: "success",
-              title: "Order updated",
-              text: "The order has been updated successfully.",
-              timer: 1800,
-              showConfirmButton: false,
-              background: "#111111",
-              color: "#ffffff",
-          });
-      } catch (error) {
-          setUpdateError(
-              error.message ||
-                  "Unable to update order."
-          );
-      } finally {
-          setUpdatingOrder(false);
-      }
-  };
+    const handleUpdateOrder =
+        async (orderData) => {
+            setUpdatingOrder(true);
+            setUpdateError(null);
 
+            try {
+                await updateOrder(
+                    id,
+                    orderData
+                );
 
-  const handleRecordPayment =
-      async (paymentData) => {
-          setRecordingPayment(true);
-          setPaymentError(null);
+                setEditModalOpen(false);
 
-          try {
-              await recordPayment({
-                  orderId: id,
-                  ...paymentData,
-              });
+                await Promise.all([
+                    refetch(),
+                    refetchPayments(),
+                ]);
 
-              setPaymentModalOpen(false);
+                await Swal.fire({
+                    icon: "success",
+                    title: "Order updated",
+                    text: "The order has been updated successfully.",
+                    timer: 1800,
+                    showConfirmButton: false,
+                    background: "#111111",
+                    color: "#ffffff",
+                });
+            } catch (error) {
+                setUpdateError(
+                    error.message ||
+                        "Unable to update order."
+                );
+            } finally {
+                setUpdatingOrder(
+                    false
+                );
+            }
+        };
 
-              await Promise.all([
-                  refetchPayments(),
-                  refetch(),
-              ]);
-          } catch (error) {
-              setPaymentError(
-                  error.message ||
-                      "Unable to record payment."
-              );
-          } finally {
-              setRecordingPayment(false);
-          }
-      };
+    const handleRecordPayment =
+        async (paymentData) => {
+            setRecordingPayment(true);
+            setPaymentError(null);
 
+            try {
+                await recordPayment({
+                    orderId: id,
+                    ...paymentData,
+                });
 
-  const handleDeletePayment = async (
-      paymentId
-  ) => {
-      const payment =
-          payments.find(
-              (item) =>
-                  item._id === paymentId
-          );
+                setPaymentModalOpen(
+                    false
+                );
 
-      if (!payment) {
-          return;
-      }
+                await Promise.all([
+                    refetchPayments(),
+                    refetch(),
+                ]);
+            } catch (error) {
+                setPaymentError(
+                    error.message ||
+                        "Unable to record payment."
+                );
+            } finally {
+                setRecordingPayment(
+                    false
+                );
+            }
+        };
 
-      const result =
-          await Swal.fire({
-              icon: "warning",
-              title: "Delete payment?",
-              text: `This will remove ${formatCurrency(
-                  payment.amount
-              )} from this order's payment history.`,
-              showCancelButton: true,
-              confirmButtonText:
-                  "Delete payment",
-              cancelButtonText: "Cancel",
-              confirmButtonColor: "#dc2626",
-              background: "#111111",
-              color: "#ffffff",
-          });
+    const handleDeletePayment =
+        async (paymentId) => {
+            const payment =
+                payments.find(
+                    (item) =>
+                        item._id ===
+                        paymentId
+                );
 
-      if (!result.isConfirmed) {
-          return;
-      }
+            if (!payment) {
+                return;
+            }
 
-      setDeletingPaymentId(
-          paymentId
-      );
+            const result =
+                await Swal.fire({
+                    icon: "warning",
+                    title: "Delete payment?",
+                    text: `This will remove ${formatCurrency(
+                        payment.amount
+                    )} from this order's payment history.`,
+                    showCancelButton: true,
+                    confirmButtonText:
+                        "Delete payment",
+                    cancelButtonText:
+                        "Cancel",
+                    confirmButtonColor:
+                        "#dc2626",
+                    background: "#111111",
+                    color: "#ffffff",
+                });
 
-      try {
-          await deletePayment(
-              paymentId
-          );
+            if (!result.isConfirmed) {
+                return;
+            }
 
-          await Promise.all([
-              refetchPayments(),
-              refetch(),
-          ]);
+            setDeletingPaymentId(
+                paymentId
+            );
 
-          await Swal.fire({
-              icon: "success",
-              title: "Payment deleted",
-              text: "The payment has been removed successfully.",
-              timer: 1800,
-              showConfirmButton: false,
-              background: "#111111",
-              color: "#ffffff",
-          });
-      } catch (error) {
-          await Swal.fire({
-              icon: "error",
-              title: "Unable to delete payment",
-              text:
-                  error.message ||
-                  "Something went wrong.",
-              background: "#111111",
-              color: "#ffffff",
-          });
-      } finally {
-          setDeletingPaymentId(null);
-      }
-  };
+            try {
+                await deletePayment(
+                    paymentId
+                );
 
+                await Promise.all([
+                    refetchPayments(),
+                    refetch(),
+                ]);
 
-  if (loading) {
+                await Swal.fire({
+                    icon: "success",
+                    title: "Payment deleted",
+                    text: "The payment has been removed successfully.",
+                    timer: 1800,
+                    showConfirmButton: false,
+                    background: "#111111",
+                    color: "#ffffff",
+                });
+            } catch (error) {
+                await Swal.fire({
+                    icon: "error",
+                    title: "Unable to delete payment",
+                    text:
+                        error.message ||
+                        "Something went wrong.",
+                    background: "#111111",
+                    color: "#ffffff",
+                });
+            } finally {
+                setDeletingPaymentId(
+                    null
+                );
+            }
+        };
+
+    if (loading) {
         return (
             <div className="animate-pulse">
                 <div className="h-4 w-28 rounded bg-command-surface" />
@@ -255,7 +325,10 @@ const OrderDetailsPage = () => {
                     to="/orders"
                     className="inline-flex items-center gap-2 text-xs text-command-muted hover:text-command-white"
                 >
-                    <ArrowLeft size={14} />
+                    <ArrowLeft
+                        size={14}
+                    />
+
                     Back to orders
                 </Link>
 
@@ -277,24 +350,33 @@ const OrderDetailsPage = () => {
         order.items?.reduce(
             (sum, item) =>
                 sum +
-                Number(item.productCost || 0) *
-                    Number(item.quantity || 0),
+                Number(
+                    item.productCost ||
+                        0
+                ) *
+                    Number(
+                        item.quantity ||
+                            0
+                    ),
             0
         ) || 0;
 
     const estimatedProfit =
-        Number(order.total || 0) -
+        Number(
+            order.total || 0
+        ) -
         totalCost;
 
-
-
-  return (
+    return (
         <div>
             <Link
                 to="/orders"
                 className="inline-flex items-center gap-2 text-xs text-command-muted transition hover:text-command-white"
             >
-                <ArrowLeft size={14} />
+                <ArrowLeft
+                    size={14}
+                />
+
                 Back to orders
             </Link>
 
@@ -339,8 +421,13 @@ const OrderDetailsPage = () => {
                     <button
                         type="button"
                         onClick={() => {
-                            setUpdateError(null);
-                            setEditModalOpen(true);
+                            setUpdateError(
+                                null
+                            );
+
+                            setEditModalOpen(
+                                true
+                            );
                         }}
                         className="inline-flex h-10 items-center gap-2 rounded-command-md border border-command-border px-4 text-sm text-command-muted transition hover:border-command-green/30 hover:text-command-green"
                     >
@@ -363,7 +450,10 @@ const OrderDetailsPage = () => {
                         }}
                         className="inline-flex h-10 items-center gap-2 rounded-command-md border border-command-border px-4 text-sm text-command-muted transition hover:border-red-500/30 hover:text-red-400"
                     >
-                        <Archive size={15} />
+                        <Archive
+                            size={15}
+                        />
+
                         Archive
                     </button>
                 </div>
@@ -472,7 +562,9 @@ const OrderDetailsPage = () => {
                     <div className="p-5">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-command-md border border-command-border bg-command-black text-command-green">
-                                <UserRound size={17} />
+                                <UserRound
+                                    size={17}
+                                />
                             </div>
 
                             <div>
@@ -583,34 +675,42 @@ const OrderDetailsPage = () => {
                         </p>
                     </div>
                 </div>
-      </div>
+            </div>
 
-      {/* PAYMENTS */}
+            {/* PAYMENTS */}
 
-      <section className="mt-5">
-          <PaymentSummary
-              summary={summary}
-              loading={paymentsLoading}
-              onRecordPayment={() =>
-                  setPaymentModalOpen(true)
-              }
-          />
+            <section className="mt-5">
+                <PaymentSummary
+                    summary={summary}
+                    loading={
+                        paymentsLoading
+                    }
+                    onRecordPayment={() =>
+                        setPaymentModalOpen(
+                            true
+                        )
+                    }
+                />
 
-          <div className="mt-5">
-            <PaymentHistory
-                payments={payments}
-                loading={paymentsLoading}
-                onDelete={handleDeletePayment}
-                deletingPaymentId={
-                    deletingPaymentId
-                }
-            />
-          </div>
-      </section>
+                <div className="mt-5">
+                    <PaymentHistory
+                        payments={
+                            payments
+                        }
+                        loading={
+                            paymentsLoading
+                        }
+                        onDelete={
+                            handleDeletePayment
+                        }
+                        deletingPaymentId={
+                            deletingPaymentId
+                        }
+                    />
+                </div>
+            </section>
 
-      {/* FUTURE ACTIONS */}
-
-
+            {/* ORDER ACTIONS */}
 
             <section className="mt-5 rounded-command-lg border border-command-border bg-command-surface">
                 <div className="border-b border-command-border px-5 py-4">
@@ -624,44 +724,103 @@ const OrderDetailsPage = () => {
                 </div>
 
                 <div className="grid gap-3 p-5 sm:grid-cols-3 lg:grid-cols-3">
-                  <button
-                      type="button"
-                      onClick={() =>
-                          navigate(`/orders/${id}/invoice`)
-                      }
-                      disabled={
-                          order.status === "cancelled"
-                      }
-                      className="flex items-center gap-3 rounded-command-md border border-command-border p-4 text-left transition hover:border-command-green/30 hover:bg-command-black/40 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                      <FileText
-                          size={17}
-                          className="text-command-green"
-                      />
 
-                      <div>
-                          <p className="text-xs font-medium">
-                              Invoice
-                          </p>
+                    {/* INVOICE */}
 
-                          <p className="mt-1 text-[10px] text-command-muted">
-                              {order.status === "cancelled"
-                                  ? "Unavailable for cancelled order"
-                                  : "View and download invoice"}
-                          </p>
-                      </div>
-                  </button>
+                    {canCreateInvoice ? (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                navigate(
+                                    `/orders/${id}/invoice`
+                                )
+                            }
+                            disabled={
+                                order.status ===
+                                "cancelled"
+                            }
+                            className="flex items-center gap-3 rounded-command-md border border-command-border p-4 text-left transition hover:border-command-green/30 hover:bg-command-black/40 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            <FileText
+                                size={17}
+                                className="text-command-green"
+                            />
 
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium">
+                                    Invoice
+                                </p>
+
+                                <p className="mt-1 text-[10px] text-command-muted">
+                                    {order.status ===
+                                    "cancelled"
+                                        ? "Unavailable for cancelled order"
+                                        : hasInvoice
+                                        ? "View and download invoice"
+                                        : "Create and download invoice"}
+                                </p>
+
+                                {hasInvoice &&
+                                    order.invoiceNumber && (
+                                        <p className="mt-1 font-mono text-[9px] text-command-green">
+                                            {
+                                                order.invoiceNumber
+                                            }
+                                        </p>
+                                    )}
+                            </div>
+                        </button>
+                    ) : (
+                        <Link
+                            to="/pricing"
+                            className="flex items-center gap-3 rounded-command-md border border-red-400/20 bg-red-400/[0.03] p-4 text-left transition hover:border-red-400/30 hover:bg-red-400/[0.06]"
+                        >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-command-sm border border-red-400/20 bg-red-400/10 text-red-400">
+                                <FileText
+                                    size={15}
+                                />
+                            </div>
+
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium text-command-white">
+                                    Invoice
+                                </p>
+
+                                <p className="mt-1 text-[10px] text-red-400">
+                                    Monthly limit reached
+                                </p>
+
+                                <p className="mt-1 text-[10px] text-command-muted">
+                                    {invoiceUsage.used}{" "}
+                                    /{" "}
+                                    {
+                                        invoiceUsage.limit
+                                    }{" "}
+                                    invoices used
+                                </p>
+
+                                <p className="mt-2 text-[10px] font-medium text-command-green">
+                                    Upgrade to Pro →
+                                </p>
+                            </div>
+                        </Link>
+                    )}
+
+                    {/* RECORD PAYMENT */}
 
                     <button
                         type="button"
                         onClick={() =>
-                            setPaymentModalOpen(true)
+                            setPaymentModalOpen(
+                                true
+                            )
                         }
                         disabled={
                             paymentsLoading ||
-                            summary?.balance <= 0 ||
-                            order.status === "cancelled"
+                            summary?.balance <=
+                                0 ||
+                            order.status ===
+                                "cancelled"
                         }
                         className="flex items-center gap-3 rounded-command-md border border-command-border p-4 text-left transition hover:border-command-green/30 hover:bg-command-black/40 disabled:cursor-not-allowed disabled:opacity-40"
                     >
@@ -676,20 +835,29 @@ const OrderDetailsPage = () => {
                             </p>
 
                             <p className="mt-1 text-[10px] text-command-muted">
-                                {summary?.balance <= 0
+                                {summary?.balance <=
+                                0
                                     ? "Order fully paid"
-                                    : order.status === "cancelled"
+                                    : order.status ===
+                                      "cancelled"
                                     ? "Cancelled order"
                                     : "Add a payment"}
                             </p>
                         </div>
                     </button>
 
+                    {/* WHATSAPP */}
+
                     <button
                         type="button"
-                        onClick={() => setWhatsappModalOpen(true)}
+                        onClick={() =>
+                            setWhatsappModalOpen(
+                                true
+                            )
+                        }
                         disabled={
-                            order.status === "cancelled"
+                            order.status ===
+                            "cancelled"
                         }
                         className="flex items-center gap-3 rounded-command-md border border-command-border p-4 text-left transition hover:border-command-green/30 hover:bg-command-black/40 disabled:cursor-not-allowed disabled:opacity-40"
                     >
@@ -709,44 +877,83 @@ const OrderDetailsPage = () => {
                         </div>
                     </button>
                 </div>
-      </section>
+            </section>
 
-      <RecordPaymentModal
-          open={paymentModalOpen}
-          onClose={() => {
-              if (!recordingPayment) {
-                  setPaymentModalOpen(false);
-                  setPaymentError(null);
-              }
-          }}
-          onSubmit={handleRecordPayment}
-          loading={recordingPayment}
-          balance={summary?.balance || 0}
-      />
-      <EditOrderModal
-          open={editModalOpen}
-          order={order}
-          onClose={() => {
-              if (!updatingOrder) {
-                  setEditModalOpen(false);
-                  setUpdateError(null);
-              }
-          }}
-          onSubmit={handleUpdateOrder}
-          loading={updatingOrder}
-          error={updateError}
-      />
-      <WhatsAppModal
-          open={whatsappModalOpen}
-          onClose={() =>
-              setWhatsappModalOpen(false)
-          }
-          orderId={id}
-          order={{
-                  ...order,
-                  balance: summary?.balance || 0,
-              }}
-      />
+            <RecordPaymentModal
+                open={
+                    paymentModalOpen
+                }
+                onClose={() => {
+                    if (
+                        !recordingPayment
+                    ) {
+                        setPaymentModalOpen(
+                            false
+                        );
+
+                        setPaymentError(
+                            null
+                        );
+                    }
+                }}
+                onSubmit={
+                    handleRecordPayment
+                }
+                loading={
+                    recordingPayment
+                }
+                balance={
+                    summary?.balance ||
+                    0
+                }
+            />
+
+            <EditOrderModal
+                open={
+                    editModalOpen
+                }
+                order={order}
+                onClose={() => {
+                    if (
+                        !updatingOrder
+                    ) {
+                        setEditModalOpen(
+                            false
+                        );
+
+                        setUpdateError(
+                            null
+                        );
+                    }
+                }}
+                onSubmit={
+                    handleUpdateOrder
+                }
+                loading={
+                    updatingOrder
+                }
+                error={
+                    updateError
+                }
+            />
+
+            <WhatsAppModal
+                open={
+                    whatsappModalOpen
+                }
+                onClose={() =>
+                    setWhatsappModalOpen(
+                        false
+                    )
+                }
+                orderId={id}
+                order={{
+                    ...order,
+                    balance:
+                        summary?.balance ||
+                        0,
+                }}
+            />
         </div>
     );
 };

@@ -52,6 +52,9 @@ const paymentSchema = new mongoose.Schema(
       trim: true,
       maxlength: 500,
     },
+    receiptCreatedAt: {
+      type: Date,
+    }
 
   },
   {

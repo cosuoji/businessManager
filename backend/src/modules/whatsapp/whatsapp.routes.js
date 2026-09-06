@@ -17,6 +17,11 @@ import {
   authenticate,
 } from "../../middleware/auth.js";
 
+import {
+  requirePro,
+} from "../../middleware/subscription.js";
+
+
 const router =
   express.Router();
 
@@ -25,24 +30,28 @@ router.use(authenticate);
 router.get(
   "/invoice/:orderId",
   validateOrderId,
+  requirePro,
   getInvoiceMessage
 );
 
 router.get(
   "/receipt/:paymentId",
   validatePaymentId,
+  requirePro,
   getReceiptMessage
 );
 
 router.get(
   "/payment-reminder/:orderId",
   validateOrderId,
+  requirePro,
   getPaymentReminder
 );
 
 router.get(
   "/outstanding/:customerId",
   validateCustomerId,
+  requirePro,
   getOutstandingBalanceMessage
 );
 

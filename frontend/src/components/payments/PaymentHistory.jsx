@@ -1,13 +1,17 @@
 import {
     CreditCard,
-  Receipt,
-  Trash,
-  LoaderCircle,
+    Receipt,
+    Trash,
+    LoaderCircle,
 } from "lucide-react";
 
 import {
     useState,
 } from "react";
+
+import {
+    Link,
+} from "react-router-dom";
 
 import PaymentMethodBadge from "./PaymentMethodBadge";
 
@@ -20,63 +24,144 @@ import {
     downloadReceipt,
 } from "../../services/receipts";
 
+import {
+    useUsage,
+} from "../../hooks/useUsage";
+
+import LimitReached from "../common/LimitReached";
+
 const PaymentHistory = ({
-  payments = [],
-  onDelete,
-  deletingPaymentId,
-  loading = false,
+    payments = [],
+    onDelete,
+    deletingPaymentId,
+    loading = false,
 }) => {
     const [
         downloadingReceipt,
         setDownloadingReceipt,
     ] = useState(null);
 
-    const handleDownloadReceipt = async (paymentId, receiptNumber) => {
-        try {
-            setDownloadingReceipt(paymentId);
+    const {
+        usage,
+        loading: usageLoading,
+        refreshUsage,
+    } = useUsage();
 
-            const response =
-                await downloadReceipt(paymentId);
+    const receiptUsage =
+        usage?.receipts;
 
-            const blob =
-                response.data ||
-                response;
+    const receiptLimitReached =
+        receiptUsage &&
+        receiptUsage.limit !== null &&
+        receiptUsage.used >=
+            receiptUsage.limit;
 
-            const url =
-                window.URL.createObjectURL(blob);
+    const handleDownloadReceipt =
+        async (
+            paymentId,
+            receiptNumber
+        ) => {
+            try {
+                setDownloadingReceipt(
+                    paymentId
+                );
 
-            const link =
-                document.createElement("a");
+                const response =
+                    await downloadReceipt(
+                        paymentId
+                    );
 
-            link.href = url;
+                const blob =
+                    response.data ||
+                    response;
 
-            link.download =
-                `${receiptNumber}.pdf`;
+                const url =
+                    window.URL.createObjectURL(
+                        blob
+                    );
 
-            document.body.appendChild(link);
+                const link =
+                    document.createElement(
+                        "a"
+                    );
 
-            link.click();
+                link.href = url;
 
-            link.remove();
+                /*
+                 * Existing receipts have a receiptNumber.
+                 *
+                 * For a new receipt, the backend creates
+                 * the receipt number during this request,
+                 * so we use a safe fallback filename.
+                 */
+                link.download =
+                    receiptNumber
+                        ? `${receiptNumber}.pdf`
+                        : `receipt-${paymentId}.pdf`;
 
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error(
-                "Unable to download receipt:",
-                error
-            );
-        } finally {
-            setDownloadingReceipt(null);
-        }
-    };
+                document.body.appendChild(
+                    link
+                );
+
+                link.click();
+
+                link.remove();
+
+                window.URL.revokeObjectURL(
+                    url
+                );
+
+                /*
+                 * If this was a newly-created receipt,
+                 * refresh usage so the UI immediately reflects
+                 * the newly consumed allowance.
+                 */
+                if (!receiptNumber) {
+                    await refreshUsage();
+                }
+            } catch (error) {
+                console.error(
+                    "Unable to download receipt:",
+                    error
+                );
+            } finally {
+                setDownloadingReceipt(
+                    null
+                );
+            }
+        };
 
     return (
         <section className="rounded-command-lg border border-command-border bg-command-surface">
+            {/* HEADER */}
+
             <div className="flex items-center justify-between border-b border-command-border px-5 py-4">
                 <div>
-                    <h2 className="text-sm font-semibold">
-                        Payment history
-                    </h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-sm font-semibold">
+                            Payment history
+                        </h2>
+
+                        {!usageLoading &&
+                            receiptUsage && (
+                                <span
+                                    className={`rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider ${
+                                        receiptLimitReached
+                                            ? "bg-red-400/10 text-red-400"
+                                            : "bg-command-green/10 text-command-green"
+                                    }`}
+                                >
+                                    Receipts{" "}
+                                    {
+                                        receiptUsage.used
+                                    }
+                                    {receiptUsage.limit !==
+                                    null
+                                        ? ` / ${receiptUsage.limit}`
+                                        : " / Unlimited"}
+                                </span>
+                            )}
+                    </div>
 
                     <p className="mt-1 text-xs text-command-muted">
                         Recorded payments for this order
@@ -90,6 +175,25 @@ const PaymentHistory = ({
                     />
                 </div>
             </div>
+
+            {/* RECEIPT LIMIT WARNING */}
+
+            {receiptLimitReached && (
+                <div className="border-b border-command-border px-5 py-4">
+                    <LimitReached
+                        resource="Receipt"
+                        used={
+                            receiptUsage.used
+                        }
+                        limit={
+                            receiptUsage.limit
+                        }
+                        message="You've used all your receipt allowance for this month. Existing receipts are still available, but creating new receipts requires Pro."
+                    />
+                </div>
+            )}
+
+            {/* CONTENT */}
 
             {loading ? (
                 <div className="divide-y divide-command-border">
@@ -134,6 +238,20 @@ const PaymentHistory = ({
                             const isDownloading =
                                 downloadingReceipt ===
                                 payment._id;
+
+                            const hasReceipt =
+                                Boolean(
+                                    payment.receiptNumber
+                                );
+
+                            /*
+                             * Existing receipts are always available.
+                             *
+                             * New receipts are only available
+                             * while the user is below their limit.
+                             */
+                            const canCreateReceipt =
+                                !receiptLimitReached;
 
                             return (
                                 <div
@@ -190,65 +308,105 @@ const PaymentHistory = ({
                                                 </p>
                                             </div>
 
+                                            {/* RECEIPT ACTION */}
+
+                                            {hasReceipt ||
+                                            canCreateReceipt ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleDownloadReceipt(
+                                                            payment._id,
+                                                            payment.receiptNumber
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        isDownloading
+                                                    }
+                                                    className="inline-flex h-8 items-center gap-1.5 rounded-command-md border border-command-border px-2.5 text-[10px] font-medium text-command-muted transition hover:border-command-green/30 hover:bg-command-black hover:text-command-green disabled:cursor-not-allowed disabled:opacity-50"
+                                                    title={
+                                                        hasReceipt
+                                                            ? "Download receipt"
+                                                            : "Create and download receipt"
+                                                    }
+                                                >
+                                                    <Receipt
+                                                        size={
+                                                            13
+                                                        }
+                                                        strokeWidth={
+                                                            1.5
+                                                        }
+                                                    />
+
+                                                    {isDownloading
+                                                        ? "Downloading..."
+                                                        : hasReceipt
+                                                        ? "Receipt"
+                                                        : "Create receipt"}
+                                                </button>
+                                            ) : (
+                                                <Link
+                                                    to="/pricing"
+                                                    className="inline-flex h-8 items-center gap-1.5 rounded-command-md border border-red-400/20 bg-red-400/5 px-2.5 text-[10px] font-medium text-red-400 transition hover:border-red-400/30 hover:bg-red-400/10"
+                                                    title="Upgrade to create more receipts"
+                                                >
+                                                    <Receipt
+                                                        size={
+                                                            13
+                                                        }
+                                                        strokeWidth={
+                                                            1.5
+                                                        }
+                                                    />
+
+                                                    Upgrade
+                                                </Link>
+                                            )}
+
+                                            {/* DELETE */}
+
                                             <button
                                                 type="button"
                                                 onClick={() =>
-                                                    handleDownloadReceipt(
-                                                      payment._id,
-                                                      payment.receiptNumber,
+                                                    onDelete(
+                                                        payment._id
                                                     )
                                                 }
                                                 disabled={
-                                                    isDownloading
+                                                    deletingPaymentId ===
+                                                    payment._id
                                                 }
-                                                className="inline-flex h-8 items-center gap-1.5 rounded-command-md border border-command-border px-2.5 text-[10px] font-medium text-command-muted transition hover:border-command-green/30 hover:bg-command-black hover:text-command-green disabled:cursor-not-allowed disabled:opacity-50"
-                                                title="Download receipt"
+                                                className="inline-flex h-8 items-center gap-1.5 rounded-command-md border border-red-500/20 px-2.5 text-[10px] font-medium text-red-400 transition hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                                title="Delete payment"
                                             >
-                                                <Receipt
-                                                    size={
-                                                        13
-                                                    }
-                                                    strokeWidth={
-                                                        1.5
-                                                    }
-                                                />
+                                                {deletingPaymentId ===
+                                                payment._id ? (
+                                                    <LoaderCircle
+                                                        size={
+                                                            13
+                                                        }
+                                                        strokeWidth={
+                                                            1.5
+                                                        }
+                                                        className="animate-spin"
+                                                    />
+                                                ) : (
+                                                    <Trash
+                                                        size={
+                                                            13
+                                                        }
+                                                        strokeWidth={
+                                                            1.5
+                                                        }
+                                                    />
+                                                )}
 
-                                                {isDownloading
-                                                    ? "Downloading..."
-                                                    : "Receipt"}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onDelete(payment._id)
-                                        }
-                                        disabled={
-                                            deletingPaymentId ===
-                                            payment._id
-                                        }
-                                        className="inline-flex h-8 items-center gap-1.5 rounded-command-md border border-red-500/20 px-2.5 text-[10px] font-medium text-red-400 transition hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
-                                        title="Delete payment"
-                                    >
-                                        {deletingPaymentId ===
-                                        payment._id ? (
-                                            <LoaderCircle
-                                                size={13}
-                                                strokeWidth={1.5}
-                                                className="animate-spin"
-                                            />
-                                        ) : (
-                                            <Trash
-                                                size={13}
-                                                strokeWidth={1.5}
-                                            />
-                                        )}
-
-                                        {deletingPaymentId ===
-                                        payment._id
-                                            ? "Deleting..."
-                                            : "Delete"}
-                                    </button>
-
+                                                {deletingPaymentId ===
+                                                payment._id
+                                                    ? "Deleting..."
+                                                    : "Delete"}
+                                            </button>
                                         </div>
                                     </div>
 

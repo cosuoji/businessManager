@@ -12,6 +12,7 @@ import {
   validateCustomerUpdate,
 } from "./customer.validation.js";
 
+
 export const create = async (req, res, next) => {
   try {
     const errors = validateCustomer(req.body);
@@ -25,7 +26,8 @@ export const create = async (req, res, next) => {
 
     const customer = await createCustomer(
       req.user.id,
-      req.body
+      req.body,
+      req.user
     );
 
     return res.status(201).json({

@@ -17,7 +17,7 @@ import OrdersPage from "../pages/app/orders/OrdersPage";
 import PaymentsPage from "../pages/app/payments/PaymentsPage";
 import OutstandingPage from "../pages/app/outstanding/OutstandingPage";
 import InvoicePage from "../pages/app/invoices/InvoicePage";
-import InvoicesPage from "../pages/app/invoices/InvoicesPage";
+import NotFoundPage from "../pages/app/NotFound";
 import Invoice from "../pages/app/invoices/Invoice";
 import ReceiptsPage from "../pages/app/ReceiptsPage";
 import SettingsPage from "../pages/app/settings/SettingsPage";
@@ -113,10 +113,10 @@ const router = createBrowserRouter([
                         element: <CustomerOutstandingPage />,
                     },
 
-                    {
-                        path: "/invoices",
-                        element: <InvoicesPage />,
-                    },
+                    // {
+                    //     path: "/invoices",
+                    //     element: <InvoicesPage />,
+                    // },
                     {
                         path: "/invoices/:orderId",
                         element: <Invoice />,
@@ -135,6 +135,10 @@ const router = createBrowserRouter([
 
             },
         ],
+  },
+    {
+        path: "*",
+        element: <NotFoundPage />,
     },
 ]);
 

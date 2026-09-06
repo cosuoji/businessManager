@@ -1,0 +1,8 @@
+
+Upgrade button
+Current plan indicator
+Pro badges
+upgrade modal/page
+"You've reached your Free limit" UI
+billing/subscription page
+Basic/Advanced Dashboard

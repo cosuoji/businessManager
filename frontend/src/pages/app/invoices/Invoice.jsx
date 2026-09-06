@@ -21,7 +21,6 @@ const Invoice = () => {
         refetch,
     } = useInvoice(orderId);
 
-    console.log(invoice)
 
     if (loading) {
         return (

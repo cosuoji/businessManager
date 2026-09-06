@@ -10,7 +10,9 @@ import PricingSection from "../../components/landing/PricingSection";
 import FAQSection from "../../components/landing/FAQSection";
 import FinalCTA from "../../components/landing/FinalCTA";
 
+
 function App() {
+
     return (
         <div className="min-h-screen overflow-x-hidden bg-command-black text-command-white">
             <Navbar />

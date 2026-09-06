@@ -1,43 +1,52 @@
+
+import { Link } from "react-router-dom";
 import Container from "../ui/Container";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
+import { useAuth } from "../../context/AuthContext";
 
 const plans = [
     {
         name: "Free",
         description:
-            "Everything you need to start organising your business.",
+            "Everything you need to start organising and tracking your business.",
         price: "₦0",
         period: "forever",
         features: [
-            "Customer management",
-            "Order management",
+            "Up to 20 customers",
+            "Up to 10 orders per month",
+            "Up to 5 invoices per month",
+            "Up to 5 receipts per month",
+            "Basic business dashboard",
+            "Customer history",
             "Payment tracking",
-            "Invoices & receipts",
-            "Outstanding balances",
-            "Business dashboard",
+            "Outstanding balance tracking",
         ],
         featured: false,
     },
     {
         name: "Pro",
         description:
-            "More visibility and control as your business grows.",
-        price: "₦5,000",
+            "Unlimited business management with powerful tools for staying on top of customers and payments.",
+        price: "₦7,000",
         period: "per month",
         features: [
             "Everything in Free",
-            "Advanced business insights",
-            "Extended history",
-            "Priority features",
-            "More invoice & receipt customisation",
-            "Priority support",
+            "Unlimited customers",
+            "Unlimited orders",
+            "Unlimited invoices",
+            "Unlimited receipts",
+            "Full business dashboard",
+            "WhatsApp invoice & payment tools",
+            "Public invoice links",
         ],
         featured: true,
     },
 ];
 
 const PricingSection = () => {
+    const { user } = useAuth();
+
     return (
         <section
             id="pricing"
@@ -54,8 +63,9 @@ const PricingSection = () => {
                     </h2>
 
                     <p className="mx-auto mt-5 max-w-xl text-sm leading-6 text-command-muted">
-                        No complicated plans. Start with the tools you need
-                        and upgrade when your business requires more.
+                        Start free with the essentials. Upgrade to Pro when
+                        your business needs unlimited usage and more powerful
+                        tools.
                     </p>
                 </div>
 
@@ -93,18 +103,18 @@ const PricingSection = () => {
                                 </span>
                             </div>
 
-                            <Button
-                                className="mt-8 w-full"
-                                variant={
-                                    plan.featured
-                                        ? "primary"
-                                        : "secondary"
-                                }
-                            >
-                                {plan.featured
-                                    ? "Start Pro"
-                                    : "Start for free"}
-                            </Button>
+                            <Link to={user ? "/dashboard" : "/register"}>
+                                <Button
+                                    className="mt-8 w-full"
+                                    variant={
+                                        plan.featured
+                                            ? "primary"
+                                            : "secondary"
+                                    }
+                                >
+                                    {user ? "Go to dashboard" : "Start for free"}
+                                </Button>
+                            </Link>
 
                             <div className="mt-8 border-t border-command-border pt-6">
                                 <p className="font-mono text-[8px] uppercase tracking-widest text-command-subtle">
@@ -112,22 +122,18 @@ const PricingSection = () => {
                                 </p>
 
                                 <ul className="mt-4 space-y-3">
-                                    {plan.features.map(
-                                        (feature) => (
-                                            <li
-                                                key={
-                                                    feature
-                                                }
-                                                className="flex gap-3 text-sm text-command-text"
-                                            >
-                                                <span className="text-command-green">
-                                                    ✓
-                                                </span>
+                                    {plan.features.map((feature) => (
+                                        <li
+                                            key={feature}
+                                            className="flex gap-3 text-sm text-command-text"
+                                        >
+                                            <span className="text-command-green">
+                                                ✓
+                                            </span>
 
-                                                {feature}
-                                            </li>
-                                        )
-                                    )}
+                                            {feature}
+                                        </li>
+                                    ))}
                                 </ul>
                             </div>
                         </div>

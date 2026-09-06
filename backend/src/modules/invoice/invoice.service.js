@@ -7,6 +7,11 @@ import Payment from "../payments/payment.model.js";
 import Customer from "../customers/customer.model.js";
 import User from "../users/user.model.js";
 
+import {
+  getMonthlyInvoiceCount,
+} from "../../services/plan-usage.service.js";
+
+import { getPlanLimits, checkLimit, hasFeature } from "../../utils/plan.js";
 import Counter from "./counter.model.js";
 
 import {
@@ -40,6 +45,7 @@ const generateInvoiceNumber =
     ).padStart(6, "0")}`;
   };
 
+
 const getOrCreateInvoiceAccess =
   async (orderId, userId) => {
     const existingOrder =
@@ -52,50 +58,185 @@ const getOrCreateInvoiceAccess =
         )
         .lean();
 
-    if (
-      existingOrder?.invoiceNumber &&
-      existingOrder?.invoicePublicToken
-    ) {
+    if (!existingOrder) {
+      const error = new Error(
+        "Order not found."
+      );
+
+      error.statusCode = 404;
+
+      throw error;
+    }
+
+    // Get current user's plan
+    const user =
+      await User.findById(userId)
+        .select("subscription")
+        .lean();
+
+    if (!user) {
+      const error = new Error(
+        "Business owner not found."
+      );
+
+      error.statusCode = 404;
+
+      throw error;
+    }
+
+    const {
+      invoicesPerMonth,
+    } = getPlanLimits(user);
+
+    const canUsePublicInvoiceLinks =
+      hasFeature(
+        user,
+        "publicInvoiceLinks"
+      );
+
+    /*
+     * EXISTING INVOICE
+     *
+     * Viewing/downloading an existing invoice
+     * does NOT consume another invoice allowance.
+     */
+    if (existingOrder.invoiceNumber) {
+      /*
+       * Free users:
+       *
+       * They can continue using the invoice normally,
+       * but they do NOT receive a public invoice token.
+       */
+      if (!canUsePublicInvoiceLinks) {
+        return {
+          invoiceNumber:
+            existingOrder.invoiceNumber,
+          invoicePublicToken: null,
+        };
+      }
+
+      /*
+       * Pro users:
+       *
+       * If the invoice already has a public token,
+       * keep using it.
+       *
+       * If it doesn't, create one now.
+       */
+      const invoicePublicToken =
+        existingOrder.invoicePublicToken ||
+        generateInvoicePublicToken();
+
+      if (
+        !existingOrder.invoicePublicToken
+      ) {
+        await Order.updateOne(
+          {
+            _id: orderId,
+            userId,
+          },
+          {
+            $set: {
+              invoicePublicToken,
+            },
+          }
+        );
+      }
+
       return {
         invoiceNumber:
           existingOrder.invoiceNumber,
-        invoicePublicToken:
-          existingOrder.invoicePublicToken,
+        invoicePublicToken,
       };
     }
 
+    /*
+     * NO INVOICE EXISTS YET
+     *
+     * Check the monthly invoice allowance.
+     */
+    const monthlyInvoiceCount =
+      await getMonthlyInvoiceCount(
+        userId
+      );
+
+    if (
+      !checkLimit(
+        monthlyInvoiceCount,
+        invoicesPerMonth
+      )
+    ) {
+      const error = new Error(
+        "You've reached the 5-invoice monthly limit on the Free plan. Upgrade to Pro to create unlimited invoices."
+      );
+
+      error.statusCode = 403;
+      error.code =
+        "INVOICE_LIMIT_REACHED";
+
+      throw error;
+    }
+
+    /*
+     * Create invoice number.
+     */
     const invoiceNumber =
-      existingOrder?.invoiceNumber ||
       await generateInvoiceNumber();
 
+    /*
+     * Only Pro users receive a public token.
+     */
     const invoicePublicToken =
-      existingOrder?.invoicePublicToken ||
-      generateInvoicePublicToken();
+      canUsePublicInvoiceLinks
+        ? generateInvoicePublicToken()
+        : null;
+
+    const updateData = {
+      invoiceNumber,
+    };
+
+    if (invoicePublicToken) {
+      updateData.invoicePublicToken =
+        invoicePublicToken;
+    }
 
     const updatedOrder =
       await Order.findOneAndUpdate(
         {
           _id: orderId,
           userId,
+          invoiceNumber: {
+            $exists: false,
+          },
         },
         {
-          $set: {
-            invoiceNumber,
-            invoicePublicToken,
-          },
+          $set: updateData,
         },
         {
           new: true,
         }
       ).lean();
 
+    if (!updatedOrder) {
+      const error = new Error(
+        "Invoice could not be created."
+      );
+
+      error.statusCode = 409;
+
+      throw error;
+    }
+
     return {
       invoiceNumber:
         updatedOrder.invoiceNumber,
+
       invoicePublicToken:
-        updatedOrder.invoicePublicToken,
+        updatedOrder.invoicePublicToken ||
+        null,
     };
   };
+
 
 
 const getPaymentSummary = async (
@@ -500,8 +641,39 @@ export const getPublicInvoiceData =
       throw error;
     }
 
-    return getInvoiceData(
-      order.userId.toString(),
-      order._id.toString()
+    const user =
+         await User.findById(order.userId)
+           .select("subscription")
+           .lean();
+
+       if (!user) {
+         const error = new Error(
+           "Business owner not found."
+         );
+
+         error.statusCode = 404;
+
+         throw error;
+       }
+
+       if (
+         !hasFeature(
+           user,
+           "publicInvoiceLinks"
+         )
+       ) {
+         const error = new Error(
+           "Public invoice links require a Pro plan."
+         );
+
+         error.statusCode = 403;
+         error.code = "PRO_REQUIRED";
+
+         throw error;
+       }
+
+       return getInvoiceData(
+         order.userId,
+         order._id
     );
   };

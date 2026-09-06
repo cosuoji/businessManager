@@ -59,7 +59,7 @@ const Topbar = () => {
         pageTitles["/dashboard"];
 
     return (
-        <header className="flex h-18 shrink-0 items-center justify-between border-b border-command-border bg-command-black/80 px-5 backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="flex relative z-50 h-18 shrink-0 items-center justify-between border-b border-command-border bg-command-black/80 px-5 backdrop-blur-xl sm:px-6 lg:px-8">
             <div>
                 {/* <h1 className="text-sm font-semibold sm:text-base">
                     {page.title}

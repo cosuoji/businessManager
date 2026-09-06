@@ -137,6 +137,7 @@ export const getCurrentUser = async (req, res, next) => {
         businessAddress: user.businessAddress,
         currency: user.currency,
         settings: user.settings,
+        subscription: user.subscription,
       },
     });
   } catch (error) {

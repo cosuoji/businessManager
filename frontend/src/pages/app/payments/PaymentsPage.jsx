@@ -133,7 +133,7 @@ const PaymentsPage = () => {
 
             <section className="mt-5 rounded-command-lg border border-command-border bg-command-surface">
                 <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
-                    <div className="relative flex-1">
+                    <div className=" flex-1">
                         <Search
                             size={15}
                             className="absolute left-3.5 top-1/2 -translate-y-1/2 text-command-muted"
@@ -150,7 +150,7 @@ const PaymentsPage = () => {
                                 )
                             }
                             placeholder="Search payments or order number..."
-                            className="h-10 w-full rounded-command-md border border-command-border bg-command-black pl-10 pr-3 text-sm text-command-white outline-none placeholder:text-command-muted/50 focus:border-command-green/40"
+                            className="h-10 w-full  rounded-command-md border border-command-border bg-command-black pl-10 pr-3 text-sm text-command-white outline-none placeholder:text-command-muted/50 focus:border-command-green/40"
                         />
                     </div>
 

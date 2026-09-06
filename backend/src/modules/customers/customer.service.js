@@ -1,6 +1,9 @@
 import Customer from "./customer.model.js";
+import { getPlanLimits, checkLimit } from "../../utils/plan.js";
+import User from "../users/user.model.js";
 
-export const createCustomer = async (userId, data) => {
+
+export const createCustomer = async (userId, data, user) => {
   const {
     name,
     phone,
@@ -8,6 +11,24 @@ export const createCustomer = async (userId, data) => {
     address,
     notes,
   } = data;
+
+  const userObject = await User.findById(user.id);
+  // Check customer plan limit
+  const { customers: customerLimit } = getPlanLimits(userObject);
+  const customerCount = await Customer.countDocuments({
+    userId,
+  });
+
+  if (!checkLimit(customerCount, customerLimit)) {
+    const error = new Error(
+      "You've reached the 20-customer limit on the Free plan. Upgrade to Pro to add unlimited customers."
+    );
+
+    error.statusCode = 403;
+    error.code = "CUSTOMER_LIMIT_REACHED";
+
+    throw error;
+  }
 
   const customer = await Customer.create({
     userId,

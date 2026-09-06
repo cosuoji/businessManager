@@ -1,7 +1,11 @@
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
+import { useAuth } from "../../context/AuthContext";
+
 
 const Hero = () => {
+    const { user } = useAuth();
+
     return (
         <section className="relative overflow-hidden">
             <div className="command-glow left-1/2 top-[-250px] -translate-x-1/2" />
@@ -31,8 +35,8 @@ const Hero = () => {
                 </p>
 
                 <div className="mt-9 flex animate-command-fade-up flex-col justify-center gap-3 [animation-delay:300ms] sm:flex-row">
-                    <Button href="/register">
-                        Start for free
+                    <Button href={user ? "/dashboard" : "/register"} >
+                        {user ? "Dashboard" : "Start for free"}
                         <span>→</span>
                     </Button>
 

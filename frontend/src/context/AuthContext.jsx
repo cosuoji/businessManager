@@ -25,7 +25,6 @@ export const AuthProvider = ({
         try {
             const data =
                 await getCurrentUser();
-
             setUser(
                 data.user || data
             );

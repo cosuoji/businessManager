@@ -83,6 +83,64 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    subscription: {
+        plan: {
+            type: String,
+            enum: ["free", "pro"],
+            default: "free",
+        },
+
+        status: {
+            type: String,
+            enum: [
+                "active",
+                "trialing",
+                "past_due",
+                "cancelled",
+                "expired",
+            ],
+            default: "active",
+        },
+
+        flutterwavePlanId: {
+            type: String,
+            default: null,
+        },
+
+        flutterwaveSubscriptionId: {
+            type: String,
+            default: null,
+        },
+
+        flutterwaveCustomerId: {
+            type: String,
+            default: null,
+        },
+
+        currentPeriodStart: {
+            type: Date,
+            default: null,
+        },
+
+        currentPeriodEnd: {
+            type: Date,
+            default: null,
+        },
+
+        cancelAtPeriodEnd: {
+            type: Boolean,
+            default: false,
+        },
+
+        cancelledAt: {
+            type: Date,
+            default: null,
+      },
+      lastPaymentAt: {
+            type: Date,
+            default: null,
+        },
+    },
   },
   {
     timestamps: true,

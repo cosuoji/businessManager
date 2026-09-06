@@ -1,6 +1,10 @@
 import OrderCounter from "./orderCounter.model.js";
 import Order from "./order.model.js";
 import Customer from "../customers/customer.model.js";
+import { getMonthlyOrderCount } from "../../services/plan-usage.service.js";
+import { getPlanLimits, checkLimit } from "../../utils/plan.js";
+import User from "../users/user.model.js";
+
 
 export const generateOrderNumber = async (userId) => {
   const counter = await OrderCounter.findOneAndUpdate(
@@ -67,7 +71,6 @@ export const calculateOrder = ({
   };
 };
 
-
 export const createOrder = async (
   userId,
   data
@@ -88,13 +91,40 @@ export const createOrder = async (
     throw error;
   }
 
+  // Check monthly order limit
+  const userObject = await User.findById(userId);
+
+  const { ordersPerMonth } =
+    getPlanLimits(userObject);
+
+  const monthlyOrderCount =
+    await getMonthlyOrderCount(userId);
+
+  if (
+    !checkLimit(
+      monthlyOrderCount,
+      ordersPerMonth
+    )
+  ) {
+    const error = new Error(
+      "You've reached the 10-order monthly limit on the Free plan. Upgrade to Pro to create unlimited orders."
+    );
+
+    error.statusCode = 403;
+    error.code = "ORDER_LIMIT_REACHED";
+
+    throw error;
+  }
+
+  // Only generate an order number after
+  // confirming the user can create the order
+  const orderNumber =
+    await generateOrderNumber(userId);
+
   const calculated = calculateOrder({
     items: data.items,
     discount: data.discount,
   });
-
-  const orderNumber =
-    await generateOrderNumber(userId);
 
   const order = await Order.create({
     userId,

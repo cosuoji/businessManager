@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     Link,
     useNavigate,
@@ -8,11 +8,15 @@ import {
     ChevronDown,
     LogOut,
     Settings,
-  Receipt,
     ShoppingBag
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
+import {
+    useUsage,
+} from "../../hooks/useUsage";
+
+import UsageMeter from "../common/UsageMeter";
 
 const UserMenu = () => {
     const navigate = useNavigate();
@@ -20,12 +24,68 @@ const UserMenu = () => {
     const {
         user,
         logout,
-    } = useAuth();
+  } = useAuth();
+
+  const menuRef = useRef(null);
+
 
     const [open, setOpen] =
         useState(false);
 
-    const [loggingOut, setLoggingOut] =
+    const {
+        usage,
+        loading: usageLoading,
+        refreshUsage,
+    } = useUsage({
+        enabled: open,
+    });
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const handleClickAway = (event) => {
+            if (
+                menuRef.current &&
+                !menuRef.current.contains(
+                    event.target
+                )
+            ) {
+                setOpen(false);
+            }
+        };
+
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener(
+            "mousedown",
+            handleClickAway
+        );
+
+        document.addEventListener(
+            "keydown",
+            handleEscape
+        );
+
+        return () => {
+            document.removeEventListener(
+                "mousedown",
+                handleClickAway
+            );
+
+            document.removeEventListener(
+                "keydown",
+                handleEscape
+            );
+        };
+    }, [open]);
+
+  const [loggingOut, setLoggingOut] =
         useState(false);
 
     const handleLogout = async () => {
@@ -51,7 +111,7 @@ const UserMenu = () => {
             .toUpperCase() || "B";
 
     return (
-        <div className="relative">
+        <div ref={menuRef} className="relative">
             <button
                 type="button"
                 onClick={() =>
@@ -85,10 +145,106 @@ const UserMenu = () => {
             </button>
 
             {open && (
-              <div className="absolute right-0 top-full z-999 mt-5 w-56 overflow-hidden rounded-command-md border border-command-border bg-command-surface">
+              <div className="absolute right-0 top-full mt-5 w-56 overflow-hidden rounded-command-md border border-command-border bg-command-surface">
 
-                    <div className="p-1.5">
-                        <Link
+                <div className="p-1.5">
+
+                    {/* PLAN + USAGE */}
+
+                    <div className="mb-1.5 border-b border-command-border px-3 pb-3">
+                        <div className="mb-3 flex items-center justify-between">
+                            <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-command-muted/60">
+                                Current plan
+                            </span>
+
+                            <span
+                                className={`rounded-full px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider ${
+                                    user?.subscription?.plan === "pro"
+                                        ? "bg-command-green/10 text-command-green"
+                                        : "bg-command-black text-command-muted"
+                                }`}
+                            >
+                                {user?.subscription?.plan === "pro"
+                                    ? "Pro"
+                                    : "Free"}
+                            </span>
+                        </div>
+
+                        {usageLoading && !usage ? (
+                            <div className="space-y-3">
+                                <div className="h-3 animate-pulse rounded bg-command-black" />
+                                <div className="h-3 animate-pulse rounded bg-command-black" />
+                                <div className="h-3 animate-pulse rounded bg-command-black" />
+                                <div className="h-3 animate-pulse rounded bg-command-black" />
+                            </div>
+                        ) : usage ? (
+                            <div className="space-y-3">
+                                <UsageMeter
+                                    label="Customers"
+                                    used={
+                                        usage?.customers?.used
+                                    }
+                                    limit={
+                                        usage?.customers?.limit
+                                    }
+                                />
+
+                                <UsageMeter
+                                    label="Orders"
+                                    used={
+                                        usage?.orders?.used
+                                    }
+                                    limit={
+                                        usage?.orders?.limit
+                                    }
+                                />
+
+                                <UsageMeter
+                                    label="Invoices"
+                                    used={
+                                        usage?.invoices?.used
+                                    }
+                                    limit={
+                                        usage?.invoices?.limit
+                                    }
+                                />
+
+                                <UsageMeter
+                                    label="Receipts"
+                                    used={
+                                        usage?.receipts?.used
+                                    }
+                                    limit={
+                                        usage?.receipts?.limit
+                                    }
+                                />
+
+                                {user?.subscription?.plan ===
+                                    "free" &&
+                                    (
+                                        <Link
+                                            to="/pricing"
+                                            onClick={() =>
+                                                setOpen(false)
+                                            }
+                                            className="mt-2 flex items-center justify-center rounded-command-sm bg-command-green px-3 py-2 text-[11px] font-semibold text-[#061008] transition hover:brightness-110"
+                                        >
+                                            Upgrade to Pro
+                                        </Link>
+                                    )}
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={refreshUsage}
+                                className="text-[10px] text-command-muted transition hover:text-command-white"
+                            >
+                                Unable to load usage. Retry.
+                            </button>
+                        )}
+                    </div>
+
+                    {/* <Link
                             to="/invoices"
                             onClick={() =>
                                 setOpen(false)
@@ -99,7 +255,7 @@ const UserMenu = () => {
                                 size={15}
                             />
                             Invoices
-              </Link>
+              </Link>*/}
               <Link
                   to="/settings"
                   onClick={() =>

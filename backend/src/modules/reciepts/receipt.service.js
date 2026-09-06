@@ -6,6 +6,15 @@ import Order from "../orders/order.model.js";
 import Customer from "../customers/customer.model.js";
 import User from "../users/user.model.js";
 
+import {
+  getMonthlyReceiptCount,
+} from "../../services/plan-usage.service.js";
+
+import {
+  getPlanLimits,
+  checkLimit,
+} from "../../utils/plan.js";
+
 import Counter from "../invoice/counter.model.js";
 
 import {
@@ -35,6 +44,7 @@ const generateReceiptNumber =
     ).padStart(6, "0")}`;
   };
 
+
 const getOrCreateReceiptNumber =
   async (paymentId, userId) => {
     const existingPayment =
@@ -45,10 +55,57 @@ const getOrCreateReceiptNumber =
         .select("receiptNumber")
         .lean();
 
+    // Existing receipt:
+    // Do not consume another receipt allowance.
     if (existingPayment?.receiptNumber) {
       return existingPayment.receiptNumber;
     }
 
+    // No receipt exists yet.
+    // Check the user's plan.
+    const user =
+      await User.findById(userId)
+        .select("subscription")
+        .lean();
+
+    if (!user) {
+      const error = new Error(
+        "Business owner not found."
+      );
+
+      error.statusCode = 404;
+
+      throw error;
+    }
+
+    const {
+      receiptsPerMonth,
+    } = getPlanLimits(user);
+
+    const monthlyReceiptCount =
+      await getMonthlyReceiptCount(
+        userId
+      );
+
+    if (
+      !checkLimit(
+        monthlyReceiptCount,
+        receiptsPerMonth
+      )
+    ) {
+      const error = new Error(
+        "You've reached the 5-receipt monthly limit on the Free plan. Upgrade to Pro to create unlimited receipts."
+      );
+
+      error.statusCode = 403;
+      error.code =
+        "RECEIPT_LIMIT_REACHED";
+
+      throw error;
+    }
+
+    // Generate receipt number only after
+    // confirming the user can create one.
     const receiptNumber =
       await generateReceiptNumber();
 
@@ -72,9 +129,11 @@ const getOrCreateReceiptNumber =
       ).lean();
 
     if (updatedPayment) {
-      return receiptNumber;
+      return updatedPayment.receiptNumber;
     }
 
+    // Another request may have created
+    // the receipt concurrently.
     const finalPayment =
       await Payment.findOne({
         _id: paymentId,
@@ -85,6 +144,8 @@ const getOrCreateReceiptNumber =
 
     return finalPayment.receiptNumber;
   };
+
+
 export const getReceiptData =
   async (userId, paymentId) => {
     if (
