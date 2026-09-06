@@ -6,22 +6,14 @@ export const handleFlutterwaveWebhook = async (
 ) => {
     try {
         const signature =
-            req.headers["flutterwave-signature"];
-        console.log("Flutterwave signature:", signature);
-        console.log("Webhook headers:", req.headers);
-        console.log("Raw body exists:", Boolean(req.rawBody));
+            req.headers["verif-hash"];
 
-      if (!signature) {
-            return res.status(401).json({
-                success: false,
-                message: "Missing webhook signature.",
-            });
-        }
+
 
         const secretHash =
             process.env.FLUTTERWAVE_WEBHOOK_SECRET;
 
-        if (!secretHash) {
+        if (!signature || signature !== secretHash) {
             console.error(
                 "FLUTTERWAVE_WEBHOOK_SECRET is not configured."
             );
@@ -32,43 +24,18 @@ export const handleFlutterwaveWebhook = async (
             });
         }
 
-        if (!req.rawBody) {
-            console.error(
-                "Flutterwave webhook raw body is missing."
+        if (!signature) {
+            console.warn(
+                "Flutterwave webhook missing verif-hash."
             );
 
-            return res.status(400).json({
+            return res.status(401).json({
                 success: false,
-                message: "Invalid webhook body.",
+                message: "Missing webhook signature.",
             });
         }
 
-        const expectedSignature =
-            crypto
-                .createHmac(
-                    "sha256",
-                    secretHash
-                )
-                .update(req.rawBody)
-                .digest("base64");
-
-        const receivedBuffer =
-            Buffer.from(signature);
-
-        const expectedBuffer =
-            Buffer.from(
-                expectedSignature
-            );
-
-        const signaturesMatch =
-            receivedBuffer.length ===
-                expectedBuffer.length &&
-            crypto.timingSafeEqual(
-                receivedBuffer,
-                expectedBuffer
-            );
-
-        if (!signaturesMatch) {
+        if (signature !== secretHash) {
             console.warn(
                 "Invalid Flutterwave webhook signature."
             );
