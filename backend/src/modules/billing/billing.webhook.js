@@ -7,8 +7,11 @@ export const handleFlutterwaveWebhook = async (
     try {
         const signature =
             req.headers["flutterwave-signature"];
+        console.log("Flutterwave signature:", signature);
+        console.log("Webhook headers:", req.headers);
+        console.log("Raw body exists:", Boolean(req.rawBody));
 
-        if (!signature) {
+      if (!signature) {
             return res.status(401).json({
                 success: false,
                 message: "Missing webhook signature.",
