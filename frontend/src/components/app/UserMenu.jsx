@@ -17,6 +17,8 @@ import {
 } from "../../hooks/useUsage";
 
 import UsageMeter from "../common/UsageMeter";
+import UpgradeButton from "../common/UpgradeButton";
+
 
 const UserMenu = () => {
     const navigate = useNavigate();
@@ -99,6 +101,7 @@ const UserMenu = () => {
             });
         }
     };
+
 
     const initials =
         user?.name
@@ -222,15 +225,7 @@ const UserMenu = () => {
                                 {user?.subscription?.plan ===
                                     "free" &&
                                     (
-                                        <Link
-                                            to="/pricing"
-                                            onClick={() =>
-                                                setOpen(false)
-                                            }
-                                            className="mt-2 flex items-center justify-center rounded-command-sm bg-command-green px-3 py-2 text-[11px] font-semibold text-[#061008] transition hover:brightness-110"
-                                        >
-                                            Upgrade to Pro
-                                        </Link>
+                                        <UpgradeButton />
                                     )}
                             </div>
                         ) : (

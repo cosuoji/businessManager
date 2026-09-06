@@ -1,8 +1,22 @@
+Phase C — Billing
 
-Upgrade button
-Current plan indicator
-Pro badges
+Medium
+
+Paystack plans
+checkout endpoint
+subscription initialization
+verification
+webhook
+subscription status
+cancellation
+expiration/downgrade
+
+Phase D — Frontend
+
+Small/medium
+
+Add:
+
 upgrade modal/page
-"You've reached your Free limit" UI
 billing/subscription page
 Basic/Advanced Dashboard

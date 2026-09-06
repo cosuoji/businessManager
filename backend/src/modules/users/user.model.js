@@ -117,6 +117,16 @@ const userSchema = new mongoose.Schema(
             default: null,
         },
 
+        flutterwaveLastTransactionId: {
+            type: String,
+            default: null,
+        },
+
+        flutterwaveLastTxRef: {
+            type: String,
+            default: null,
+        },
+
         currentPeriodStart: {
             type: Date,
             default: null,
@@ -135,8 +145,9 @@ const userSchema = new mongoose.Schema(
         cancelledAt: {
             type: Date,
             default: null,
-      },
-      lastPaymentAt: {
+        },
+
+        lastPaymentAt: {
             type: Date,
             default: null,
         },

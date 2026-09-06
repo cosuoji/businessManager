@@ -1,9 +1,11 @@
 import {
-    ArrowUpRight,
     LockKeyhole,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
+
+import UpgradeButton from "./UpgradeButton";
+
 
 const LimitReached = ({
     resource,
@@ -37,16 +39,7 @@ const LimitReached = ({
                             `You've reached your ${limit} ${resource.toLowerCase()} limit for this month.`}
                     </p>
 
-                    <Link
-                        to="/pricing"
-                        className="mt-3 inline-flex items-center gap-1.5 rounded-command-sm bg-command-green px-3 py-2 text-[11px] font-semibold text-[#061008] transition hover:brightness-110"
-                    >
-                        Upgrade to Pro
-
-                        <ArrowUpRight
-                            size={13}
-                        />
-                    </Link>
+                    <UpgradeButton />
                 </div>
             </div>
         </div>

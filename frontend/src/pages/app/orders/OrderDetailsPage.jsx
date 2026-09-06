@@ -41,20 +41,16 @@ import {
 } from "../../../services/payments";
 
 import PaymentSummary from "../../../components/payments/PaymentSummary";
-
 import PaymentHistory from "../../../components/payments/PaymentHistory";
-
 import RecordPaymentModal from "../../../components/payments/RecordPaymentModal";
-
 import OrderStatusBadge from "../../../components/orders/OrderStatusBadge";
-
 import PaymentStatusBadge from "../../../components/orders/PaymentStatusBadge";
-
 import WhatsAppModal from "../../../components/whatsapp/WhatsAppModal";
 
 import {
     useUsage,
 } from "../../../hooks/useUsage";
+import UpgradeButton from "../../../components/common/UpgradeButton";
 
 const formatAmount = (amount) =>
     `₦${Number(amount || 0).toLocaleString(
@@ -771,8 +767,7 @@ const OrderDetailsPage = () => {
                             </div>
                         </button>
                     ) : (
-                        <Link
-                            to="/pricing"
+                        <div
                             className="flex items-center gap-3 rounded-command-md border border-red-400/20 bg-red-400/[0.03] p-4 text-left transition hover:border-red-400/30 hover:bg-red-400/[0.06]"
                         >
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-command-sm border border-red-400/20 bg-red-400/10 text-red-400">
@@ -799,11 +794,9 @@ const OrderDetailsPage = () => {
                                     invoices used
                                 </p>
 
-                                <p className="mt-2 text-[10px] font-medium text-command-green">
-                                    Upgrade to Pro →
-                                </p>
+                            <UpgradeButton />
                             </div>
-                        </Link>
+                              </div>
                     )}
 
                     {/* RECORD PAYMENT */}

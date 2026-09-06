@@ -2,6 +2,9 @@ import { useState } from "react";
 import Button from "../ui/Button";
 import { Link } from "react-router-dom";
 
+import { useAuth } from "../../context/AuthContext";
+
+
 const navItems = [
     {
         label: "Features",
@@ -27,7 +30,10 @@ const Navbar = () => {
 
     const closeMobileMenu = () => {
         setMobileOpen(false);
-    };
+  };
+
+    const { user } = useAuth();
+
 
     return (
         <header className="relative z-50 border-b border-command-border bg-command-black/90 backdrop-blur-xl">
@@ -63,18 +69,29 @@ const Navbar = () => {
 
                 {/* DESKTOP ACTIONS */}
 
-                <div className="hidden items-center gap-3 md:flex">
-                  <Link to="/login">
-                      <Button variant="ghost">
-                          Log in
-                      </Button>
-                  </Link>
 
-                  <Link to="/register">
+                <div className="hidden items-center gap-3 md:flex">
+                  {user ? (
+                    <Link to="/dashboard">
                       <Button>
-                          Start free
+                        Dashboard
                       </Button>
-                  </Link>
+                    </Link>
+                  ) : (
+                    <>
+                      <Link to="/login">
+                        <Button variant="ghost">
+                          Log in
+                        </Button>
+                      </Link>
+
+                      <Link to="/register">
+                        <Button>
+                          Start free
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
 
                 {/* MOBILE MENU BUTTON */}
@@ -135,28 +152,41 @@ const Navbar = () => {
                             {item.label}
                         </a>
                     ))}
-
                     <div className="mt-5 grid grid-cols-2 gap-3">
-                      <Link
-                          to="/login"
+                      {user ? (
+                        <Link
+                          to="/dashboard"
                           onClick={closeMobileMenu}
-                      >
-                          <Button
+                          className="col-span-2"
+                        >
+                          <Button className="w-full">
+                            Dashboard
+                          </Button>
+                        </Link>
+                      ) : (
+                        <>
+                          <Link
+                            to="/login"
+                            onClick={closeMobileMenu}
+                          >
+                            <Button
                               variant="secondary"
                               className="w-full"
-                          >
+                            >
                               Log in
-                          </Button>
-                      </Link>
+                            </Button>
+                          </Link>
 
-                      <Link
-                          to="/register"
-                          onClick={closeMobileMenu}
-                      >
-                          <Button className="w-full">
+                          <Link
+                            to="/register"
+                            onClick={closeMobileMenu}
+                          >
+                            <Button className="w-full">
                               Start free
-                          </Button>
-                      </Link>
+                            </Button>
+                          </Link>
+                        </>
+                      )}
                     </div>
                 </nav>
             </div>

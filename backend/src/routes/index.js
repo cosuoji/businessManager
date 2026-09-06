@@ -12,6 +12,7 @@ import whatsappRoutes from "../modules/whatsapp/whatsapp.routes.js";
 import receiptRoutes from "../modules/reciepts/receipt.routes.js";
 import invoicePublicRoutes from "../modules/invoice/invoice.routes.public.js";
 import usageRoutes from "../modules/usage/usage.routes.js";
+import billingRoutes from "../modules/billing/billing.routes.js";
 
 
 const router = express.Router();
@@ -25,6 +26,7 @@ router.get("/", (req, res) => {
 
 router.use("/auth", userRoutes);
 router.use("/customers", apiRateLimiter, customerRoutes);
+router.use("/billing", apiRateLimiter, billingRoutes);
 router.use("/usage", apiRateLimiter, usageRoutes);
 router.use("/public/invoices", apiRateLimiter, invoicePublicRoutes);
 router.use("/orders", apiRateLimiter, orderRoutes);

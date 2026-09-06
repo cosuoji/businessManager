@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "migrate": "node src/scripts/migrateUserSubscriptions.js"
+    "migrate": "node src/scripts/migrateUserSubscriptions.js",
+    "create:flutterwave:pro": "node src/scripts/createFlutterwaveProPlan.js"
   },
   "keywords": [],
   "author": "",

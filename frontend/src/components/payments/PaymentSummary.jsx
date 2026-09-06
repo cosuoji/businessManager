@@ -117,7 +117,7 @@ const PaymentSummary = ({
                                     onClick={
                                         onRecordPayment
                                     }
-                                    className="inline-flex h-9 items-center gap-2 rounded-command-md bg-command-green px-3.5 text-xs font-semibold text-[#061008] transition hover:brightness-110"
+                                    className="inline-flex h-10 items-center gap-2 rounded-command-md border border-command-border px-4 text-sm text-white transition hover:border-command-green/30 hover:text-command-green disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <CreditCard
                                         size={14}

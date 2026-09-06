@@ -32,6 +32,9 @@ import OrderStatusBadge from "../../../components/orders/OrderStatusBadge";
 import PaymentStatusBadge from "../../../components/orders/PaymentStatusBadge";
 import OrderFilters from "../../../components/orders/OrderFilters";
 
+import { useUsage } from "../../../hooks/useUsage";
+import LimitReached from "../../../components/common/LimitReached";
+
 const PAGE_SIZE = 10;
 
 const formatAmount = (amount) =>
@@ -98,7 +101,21 @@ const OrdersPage = () => {
         archived: showArchived,
     });
 
-    const orders =
+  const {
+      usage,
+      loading: usageLoading,
+      refreshUsage,
+  } = useUsage({
+      enabled: true,
+  });
+
+
+  const orderLimitReached =
+      usage?.orders?.limit !== null &&
+      usage?.orders?.used >= usage?.orders?.limit;
+
+
+  const orders =
         data?.orders || [];
 
     const pagination =
@@ -252,6 +269,15 @@ const OrdersPage = () => {
             }
         };
         return handleClick;
+  };
+
+    const handleOpenCreateOrder = () => {
+        if (orderLimitReached) {
+            return;
+        }
+
+        setCreateError(null);
+        setAddModalOpen(true);
     };
 
     return (
@@ -278,17 +304,24 @@ const OrdersPage = () => {
                 </div>
 
                 {!showArchived && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setCreateError(null);
-                            setAddModalOpen(true);
-                        }}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-command-md bg-command-green px-4 text-sm font-semibold text-[#061008] transition hover:brightness-110"
-                    >
-                        <Plus size={16} />
-                        New order
-                    </button>
+                  <button
+                      type="button"
+                      onClick={() => {
+                          if (orderLimitReached) {
+                              return;
+                          }
+
+                          setCreateError(null);
+                          setAddModalOpen(true);
+                      }}
+                      disabled={usageLoading || orderLimitReached}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-command-md bg-command-green px-4 text-sm font-semibold text-[#061008] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                      <Plus size={16} />
+                      {orderLimitReached
+                          ? "Order limit reached"
+                          : "New order"}
+                  </button>
                 )}
             </div>
 

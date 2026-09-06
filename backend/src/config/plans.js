@@ -45,3 +45,13 @@ export const PLANS = {
     interval: "monthly",
   },
 };
+
+export const BILLING = {
+    provider: "flutterwave",
+
+    pro: {
+        amount: 7000,
+        currency: "NGN",
+        interval: "monthly",
+    },
+};

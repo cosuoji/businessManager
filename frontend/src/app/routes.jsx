@@ -25,6 +25,8 @@ import CustomerDetailsPage from "../pages/app/customers/CustomerDetailsPage";
 import OrderDetailsPage from "../pages/app/orders/OrderDetailsPage";
 import CustomerOutstandingPage from "../pages/app/outstanding/CustomerOutstandingPage";
 import PublicInvoicePage from "../pages/app/public/PublicInvoicePage";
+import BillingCallbackPage from "../pages/app/billing/BillingCallbackPage";
+
 
 
 
@@ -61,6 +63,11 @@ const router = createBrowserRouter([
     {
         path: "/invoice/:token",
         element: <PublicInvoicePage />,
+    },
+
+    {
+        path: "/billing/callback",
+        element: <BillingCallbackPage />,
     },
 
     {

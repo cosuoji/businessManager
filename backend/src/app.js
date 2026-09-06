@@ -41,9 +41,17 @@ app.use(
     credentials: true,
   })
 );
+
+
 app.set("trust proxy", 1);
 app.use(helmet());
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 //app.use(mongoSanitizeMiddleware);

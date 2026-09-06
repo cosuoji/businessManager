@@ -7,13 +7,11 @@ import {
     ArrowUpRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 import StatCard from "../../components/dashboard/StatCard";
 import DashboardHeader from "../../components/dashboard/DashboardHeader";
 import RecentActivity from "../../components/dashboard/RecentActivity";
-
-
 import useDashboard from "../../hooks/useDashboard";
 
 const formatCurrency = (
@@ -55,8 +53,6 @@ const DashboardPage = () => {
   const handlePeriodChange = (value) => {
     setPeriod(value);
   };
-
-
 
 
   const getReportingRange = () => {
