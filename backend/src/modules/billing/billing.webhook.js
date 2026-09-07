@@ -33,7 +33,12 @@ export const handleFlutterwaveWebhook = async (
                 message:
                     "Invalid webhook signature.",
             });
-        }
+      }
+
+        console.log(
+            "FULL FLUTTERWAVE WEBHOOK PAYLOAD:",
+            JSON.stringify(req.body, null, 2)
+        );
 
         const event =
             req.body?.event ||
@@ -149,9 +154,13 @@ export const handleFlutterwaveWebhook = async (
             });
         }
 
-        // Extract the BizFlow user ID from
-        // the transaction reference.
+        // Identify the BizFlow user.
+        //
+        // Prefer the userId stored in Flutterwave metadata.
+        // Fall back to the tx_ref for compatibility with
+        // transactions created before metadata was relied upon.
         const userId =
+            transaction.meta?.userId ||
             txRef
                 .replace(
                     "BIZFLOW-PRO-",

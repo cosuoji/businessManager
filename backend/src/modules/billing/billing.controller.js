@@ -1,6 +1,9 @@
 import {
     createBillingCheckout,
     verifyProPayment,
+  getProSubscription,
+    cancelProSubscription,
+    syncFlutterwaveSubscription,
 } from "./billing.service.js";
 
 export const initializeProCheckout = async (
@@ -51,6 +54,77 @@ export const verifyPayment = async (
                   subscription:
                       result.subscription,
               });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getSubscription = async (
+    req,
+    res,
+    next
+) => {
+    try {
+        const subscription =
+            await getProSubscription(
+                req.user.id
+            );
+
+        return res.status(200).json({
+            success: true,
+            subscription,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const syncSubscription = async (
+    req,
+    res,
+    next
+) => {
+    try {
+        const result =
+            await syncFlutterwaveSubscription(
+                req.user.id
+            );
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Flutterwave subscription synchronized successfully.",
+            subscription:
+                result.subscription,
+            flutterwaveSubscription:
+                result.flutterwaveSubscription,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const cancelSubscription = async (
+    req,
+    res,
+    next
+) => {
+    try {
+        const result =
+            await cancelProSubscription(
+                req.user.id
+            );
+
+        return res.status(200).json({
+            success: true,
+            message: result.alreadyCancelled
+                ? "Your Pro subscription is already scheduled for cancellation."
+                : "Your Pro subscription has been cancelled. You will keep Pro access until the end of your current billing period.",
+            subscription:
+                result.subscription,
+            flutterwave:
+                result.flutterwave,
+        });
     } catch (error) {
         next(error);
     }

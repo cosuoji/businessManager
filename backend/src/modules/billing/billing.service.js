@@ -17,6 +17,7 @@ const getFlutterwaveHeaders = () => {
     };
 };
 
+
 export const createBillingCheckout = async (
     userId
 ) => {
@@ -343,54 +344,13 @@ export const verifyProPayment = async (
         throw error;
     }
 
-
-
     // --------------------------------------------------
     // 5. Activate Pro
     // --------------------------------------------------
-
-    const now = new Date();
-
-    const currentPeriodEnd =
-        new Date(now);
-
-    currentPeriodEnd.setMonth(
-        currentPeriodEnd.getMonth() + 1
+    await activateOrExtendProSubscription(
+        user,
+        transaction
     );
-
-    user.subscription.plan =
-        "pro";
-
-    user.subscription.status =
-        "active";
-
-    user.subscription.flutterwavePlanId =
-        process.env
-            .FLUTTERWAVE_PRO_PLAN_ID;
-
-    user.subscription.flutterwaveCustomerId =
-        transaction.customer?.id
-            ? String(
-                  transaction.customer.id
-              )
-            : null;
-
-    user.subscription.currentPeriodStart =
-        now;
-
-    user.subscription.currentPeriodEnd =
-        currentPeriodEnd;
-
-    user.subscription.cancelAtPeriodEnd =
-        false;
-
-    user.subscription.cancelledAt =
-        null;
-
-    user.subscription.lastPaymentAt =
-        now;
-
-    await user.save();
 
     return {
         transaction,
@@ -474,6 +434,13 @@ export const activateOrExtendProSubscription = async (
 ) => {
     const now = new Date();
 
+    let currentPeriodStart =
+        user.subscription?.currentPeriodStart
+            ? new Date(
+                user.subscription.currentPeriodStart
+            )
+            : null;
+
     let currentPeriodEnd =
         user.subscription?.currentPeriodEnd
             ? new Date(
@@ -481,33 +448,70 @@ export const activateOrExtendProSubscription = async (
             )
             : null;
 
+    const hasActivePeriod =
+        currentPeriodEnd &&
+        currentPeriodEnd > now;
+
+    // Existing active subscription with no
+    // recorded start date.
     if (
-        !currentPeriodEnd ||
-        currentPeriodEnd <= now
+        hasActivePeriod &&
+        !currentPeriodStart
     ) {
-        currentPeriodEnd = new Date(now);
+        currentPeriodStart =
+            new Date(currentPeriodEnd);
+
+        currentPeriodStart.setMonth(
+            currentPeriodStart.getMonth() - 1
+        );
     }
 
-    currentPeriodEnd.setMonth(
-        currentPeriodEnd.getMonth() + 1
-    );
+    // No active subscription period.
+    if (!hasActivePeriod) {
+        currentPeriodStart =
+            new Date(now);
+
+        currentPeriodEnd =
+            new Date(now);
+
+        currentPeriodEnd.setMonth(
+            currentPeriodEnd.getMonth() + 1
+        );
+    } else {
+        // Existing active period:
+        // extend from its current end.
+        currentPeriodEnd.setMonth(
+            currentPeriodEnd.getMonth() + 1
+        );
+    }
 
     user.subscription.plan = "pro";
+
     user.subscription.status = "active";
+
+    user.subscription.currentPeriodStart =
+        currentPeriodStart;
+
+    user.subscription.currentPeriodEnd =
+        currentPeriodEnd;
+
     user.subscription.flutterwavePlanId =
         process.env.FLUTTERWAVE_PRO_PLAN_ID;
 
     user.subscription.flutterwaveCustomerId =
         transaction.customer?.id
             ? String(transaction.customer.id)
-            : user.subscription.flutterwaveCustomerId;
+            : user.subscription
+                .flutterwaveCustomerId;
 
-    user.subscription.currentPeriodEnd =
-        currentPeriodEnd;
+    user.subscription.cancelAtPeriodEnd =
+        false;
 
-    user.subscription.cancelAtPeriodEnd = false;
-    user.subscription.cancelledAt = null;
-    user.subscription.lastPaymentAt = now;
+    user.subscription.cancelledAt =
+        null;
+
+    user.subscription.lastPaymentAt =
+        now;
 
     user.subscription.flutterwaveLastTransactionId =
         String(transaction.id);
@@ -519,6 +523,7 @@ export const activateOrExtendProSubscription = async (
 
     return user.subscription;
 };
+
 
 export const verifyFlutterwaveTransaction =
     async (transactionId) => {
@@ -566,3 +571,388 @@ export const verifyFlutterwaveTransaction =
 
         return result.data;
   };
+
+export const cancelProSubscription = async (
+    userId
+) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        const error = new Error(
+            "User account not found."
+        );
+
+        error.statusCode = 404;
+
+        throw error;
+    }
+
+    const subscription =
+        user.subscription;
+
+    if (
+        !subscription ||
+        subscription.plan !== "pro"
+    ) {
+        const error = new Error(
+            "You do not have an active Pro subscription."
+        );
+
+        error.statusCode = 400;
+        error.code = "NOT_PRO";
+
+        throw error;
+    }
+
+    if (
+        subscription.cancelAtPeriodEnd
+    ) {
+        return {
+            subscription,
+            alreadyCancelled: true,
+        };
+    }
+
+    let subscriptionId =
+        subscription
+            .flutterwaveSubscriptionId;
+
+    // If we don't have the Flutterwave
+    // subscription ID yet, synchronize it first.
+    if (!subscriptionId) {
+        const synced =
+            await syncFlutterwaveSubscription(
+                userId
+            );
+
+        subscriptionId =
+            synced
+                .subscription
+                .flutterwaveSubscriptionId;
+    }
+
+    if (!subscriptionId) {
+        const error = new Error(
+            "Flutterwave subscription could not be identified."
+        );
+
+        error.statusCode = 400;
+        error.code =
+            "FLUTTERWAVE_SUBSCRIPTION_MISSING";
+
+        throw error;
+    }
+
+    const response =
+        await fetch(
+            `${FLUTTERWAVE_API}/subscriptions/${subscriptionId}/cancel`,
+            {
+                method: "PUT",
+                headers:
+                    getFlutterwaveHeaders(),
+            }
+        );
+
+    const result =
+        await response.json();
+
+    if (!response.ok) {
+        console.error(
+            "Flutterwave subscription cancellation error:",
+            result
+        );
+
+        const error = new Error(
+            "Unable to cancel your Pro subscription."
+        );
+
+        error.statusCode = 502;
+        error.code =
+            "FLUTTERWAVE_CANCELLATION_FAILED";
+
+        throw error;
+    }
+
+    user.subscription
+        .cancelAtPeriodEnd = true;
+
+    user.subscription
+        .cancelledAt = new Date();
+
+    await user.save();
+
+    return {
+        subscription:
+            user.subscription,
+
+        flutterwave:
+            result?.data || null,
+
+        alreadyCancelled: false,
+    };
+};
+
+export const getFlutterwaveSubscriptions = async ({
+    transactionId,
+    planId,
+    status,
+    page = 1,
+} = {}) => {
+    const params = new URLSearchParams();
+
+    if (transactionId) {
+        params.set(
+            "transaction_id",
+            String(transactionId)
+        );
+    }
+
+    if (planId) {
+        params.set(
+            "plan",
+            String(planId)
+        );
+    }
+
+    if (status) {
+        params.set(
+            "status",
+            status
+        );
+    }
+
+    params.set(
+        "page",
+        String(page)
+    );
+
+    const query =
+        params.toString();
+
+    const response = await fetch(
+        `${FLUTTERWAVE_API}/subscriptions?${query}`,
+        {
+            method: "GET",
+            headers:
+                getFlutterwaveHeaders(),
+        }
+    );
+
+    const result =
+        await response.json();
+
+    if (!response.ok) {
+        console.error(
+            "Flutterwave subscriptions lookup error:",
+            result
+        );
+
+        const error = new Error(
+            "Unable to retrieve Flutterwave subscription."
+        );
+
+        error.statusCode = 502;
+        error.code =
+            "FLUTTERWAVE_SUBSCRIPTIONS_LOOKUP_FAILED";
+
+        throw error;
+    }
+
+    return result;
+};
+
+export const syncFlutterwaveSubscription = async (
+    userId
+) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        const error = new Error(
+            "User account not found."
+        );
+
+        error.statusCode = 404;
+
+        throw error;
+    }
+
+    if (
+        user.subscription?.plan !== "pro"
+    ) {
+        const error = new Error(
+            "Only Pro subscriptions can be synchronized."
+        );
+
+        error.statusCode = 400;
+        error.code = "NOT_PRO";
+
+        throw error;
+    }
+
+    const transactionId =
+        user.subscription
+            ?.flutterwaveLastTransactionId;
+
+    if (!transactionId) {
+        const error = new Error(
+            "No Flutterwave transaction is associated with this subscription."
+        );
+
+        error.statusCode = 400;
+        error.code =
+            "FLUTTERWAVE_TRANSACTION_MISSING";
+
+        throw error;
+    }
+
+    const result =
+        await getFlutterwaveSubscriptions({
+            transactionId,
+        });
+
+    const subscriptions =
+        Array.isArray(result?.data)
+            ? result.data
+            : [];
+
+    if (!subscriptions.length) {
+        const error = new Error(
+            "No Flutterwave subscription was found for this transaction."
+        );
+
+        error.statusCode = 404;
+        error.code =
+            "FLUTTERWAVE_SUBSCRIPTION_NOT_FOUND";
+
+        throw error;
+    }
+
+    const planId = Number(
+        process.env.FLUTTERWAVE_PRO_PLAN_ID
+    );
+
+    const matchingSubscription =
+        subscriptions.find(
+            (subscription) =>
+                Number(subscription.plan) ===
+                planId
+        ) || subscriptions[0];
+
+    user.subscription
+        .flutterwaveSubscriptionId =
+        String(
+            matchingSubscription.id
+        );
+
+    user.subscription
+        .flutterwavePlanId =
+        String(
+            matchingSubscription.plan
+        );
+
+    await user.save();
+
+    return {
+        subscription:
+            user.subscription,
+        flutterwaveSubscription:
+            matchingSubscription,
+    };
+};
+
+export const getProSubscription = async (
+    userId
+) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        const error = new Error(
+            "User account not found."
+        );
+
+        error.statusCode = 404;
+
+        throw error;
+    }
+
+    const subscription =
+        user.subscription;
+
+    if (
+        !subscription ||
+        subscription.plan !== "pro"
+    ) {
+        return {
+            plan: "free",
+            status: "active",
+            flutterwave: null,
+        };
+    }
+
+    let flutterwaveSubscription =
+        null;
+
+    if (
+        subscription
+            .flutterwaveSubscriptionId
+    ) {
+        const result =
+            await getFlutterwaveSubscriptions({
+                planId:
+                    process.env
+                        .FLUTTERWAVE_PRO_PLAN_ID,
+                page: 1,
+            });
+
+        const subscriptions =
+            Array.isArray(result?.data)
+                ? result.data
+                : [];
+
+        flutterwaveSubscription =
+            subscriptions.find(
+                (item) =>
+                    String(item.id) ===
+                    String(
+                        subscription
+                            .flutterwaveSubscriptionId
+                    )
+            ) || null;
+    }
+
+    return {
+        plan:
+            subscription.plan,
+
+        status:
+            subscription.status,
+
+        currentPeriodStart:
+            subscription.currentPeriodStart,
+
+        currentPeriodEnd:
+            subscription.currentPeriodEnd,
+
+        cancelAtPeriodEnd:
+            Boolean(
+                subscription.cancelAtPeriodEnd
+            ),
+
+        cancelledAt:
+            subscription.cancelledAt,
+
+        lastPaymentAt:
+            subscription.lastPaymentAt,
+
+        flutterwaveSubscriptionId:
+            subscription
+                .flutterwaveSubscriptionId,
+
+        flutterwavePlanId:
+            subscription
+                .flutterwavePlanId,
+
+        flutterwave:
+            flutterwaveSubscription,
+    };
+};

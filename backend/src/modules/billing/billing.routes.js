@@ -3,6 +3,9 @@ import express from "express";
 import {
     initializeProCheckout,
     verifyPayment,
+    getSubscription,
+    syncSubscription,
+    cancelSubscription,
 } from "./billing.controller.js";
 import {
     handleFlutterwaveWebhook,
@@ -27,5 +30,21 @@ router.post(
     "/verify",
     verifyPayment
 );
+
+router.get(
+    "/subscription",
+    getSubscription
+);
+
+router.post(
+    "/subscription/sync",
+    syncSubscription
+);
+
+router.post(
+    "/subscription/cancel",
+    cancelSubscription
+);
+
 
 export default router;

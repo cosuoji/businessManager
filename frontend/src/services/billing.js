@@ -14,3 +14,24 @@ export const verifyProPayment =
             { transactionId,txRef }
         );
     };
+
+export const getSubscription =
+    async () => {
+        return api.get(
+            "/billing/subscription"
+        );
+    };
+
+export const syncSubscription =
+    async () => {
+        return api.post(
+            "/billing/subscription/sync"
+        );
+    };
+
+export const cancelSubscription =
+    async () => {
+        return api.post(
+            "/billing/subscription/cancel"
+        );
+    };

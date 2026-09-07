@@ -8,6 +8,8 @@ import {
 
 import BusinessProfileSection from "./BusinessProfileSection";
 import AccountSection from "./AccountSection";
+import SubscriptionSection from "./SubscriptionSection";
+
 
 const SettingsPage = () => {
     const {
@@ -28,8 +30,13 @@ const SettingsPage = () => {
                 </div>
 
                 <div className="mt-8 space-y-6">
+                    {/* Subscription */}
+                    <div className="h-72 animate-pulse rounded-command-lg border border-command-border bg-command-surface" />
+
+                    {/* Business Profile */}
                     <div className="h-80 animate-pulse rounded-command-lg border border-command-border bg-command-surface" />
 
+                    {/* Account */}
                     <div className="h-64 animate-pulse rounded-command-lg border border-command-border bg-command-surface" />
                 </div>
             </div>
@@ -60,12 +67,16 @@ const SettingsPage = () => {
                 </h1>
 
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-command-muted">
-                    Manage your account and business
-                    information.
+                    Manage your account and business information.
                 </p>
             </div>
 
             <div className="space-y-6">
+                <SubscriptionSection
+                    user={user}
+                    onUpdated={refreshUser}
+                />
+
                 <BusinessProfileSection
                     user={user}
                     onUpdated={refreshUser}
