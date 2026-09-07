@@ -467,3 +467,102 @@ const handleChargeCompleted = async (
     // We'll verify the transaction
     // server-to-server before granting Pro.
 };
+
+export const activateOrExtendProSubscription = async (
+    user,
+    transaction
+) => {
+    const now = new Date();
+
+    let currentPeriodEnd =
+        user.subscription?.currentPeriodEnd
+            ? new Date(
+                user.subscription.currentPeriodEnd
+            )
+            : null;
+
+    if (
+        !currentPeriodEnd ||
+        currentPeriodEnd <= now
+    ) {
+        currentPeriodEnd = new Date(now);
+    }
+
+    currentPeriodEnd.setMonth(
+        currentPeriodEnd.getMonth() + 1
+    );
+
+    user.subscription.plan = "pro";
+    user.subscription.status = "active";
+    user.subscription.flutterwavePlanId =
+        process.env.FLUTTERWAVE_PRO_PLAN_ID;
+
+    user.subscription.flutterwaveCustomerId =
+        transaction.customer?.id
+            ? String(transaction.customer.id)
+            : user.subscription.flutterwaveCustomerId;
+
+    user.subscription.currentPeriodEnd =
+        currentPeriodEnd;
+
+    user.subscription.cancelAtPeriodEnd = false;
+    user.subscription.cancelledAt = null;
+    user.subscription.lastPaymentAt = now;
+
+    user.subscription.flutterwaveLastTransactionId =
+        String(transaction.id);
+
+    user.subscription.flutterwaveLastTxRef =
+        transaction.tx_ref;
+
+    await user.save();
+
+    return user.subscription;
+};
+
+export const verifyFlutterwaveTransaction =
+    async (transactionId) => {
+        const response = await fetch(
+            `${FLUTTERWAVE_API}/transactions/${transactionId}/verify`,
+            {
+                method: "GET",
+                headers: getFlutterwaveHeaders(),
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error(
+                "Flutterwave transaction verification failed:",
+                result
+            );
+
+            const error = new Error(
+                "Unable to verify Flutterwave transaction."
+            );
+
+            error.statusCode = 502;
+            error.code =
+                "FLUTTERWAVE_VERIFICATION_FAILED";
+
+            throw error;
+        }
+
+        if (
+            result?.status !== "success" ||
+            !result?.data
+        ) {
+            const error = new Error(
+                "Flutterwave transaction could not be verified."
+            );
+
+            error.statusCode = 400;
+            error.code =
+                "INVALID_FLUTTERWAVE_TRANSACTION";
+
+            throw error;
+        }
+
+        return result.data;
+  };

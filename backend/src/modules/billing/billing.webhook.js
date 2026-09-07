@@ -1,4 +1,13 @@
-import crypto from "crypto";
+import User from "../users/user.model.js";
+
+import {
+    BILLING,
+} from "../../config/plans.js";
+
+import {
+    verifyFlutterwaveTransaction,
+    activateOrExtendProSubscription,
+} from "./billing.service.js";
 
 export const handleFlutterwaveWebhook = async (
     req,
@@ -8,43 +17,30 @@ export const handleFlutterwaveWebhook = async (
         const signature =
             req.headers["verif-hash"];
 
-
-
         const secretHash =
             process.env.FLUTTERWAVE_WEBHOOK_SECRET;
 
-        if (!signature || signature !== secretHash) {
-            console.error(
-                "FLUTTERWAVE_WEBHOOK_SECRET is not configured."
-            );
-
-            return res.status(500).json({
-                success: false,
-                message: "Webhook configuration error.",
-            });
-        }
-
-        if (!signature) {
-            console.warn(
-                "Flutterwave webhook missing verif-hash."
-            );
-
-            return res.status(401).json({
-                success: false,
-                message: "Missing webhook signature.",
-            });
-        }
-
-        if (signature !== secretHash) {
+        if (
+            !signature ||
+            signature !== secretHash
+        ) {
             console.warn(
                 "Invalid Flutterwave webhook signature."
             );
 
             return res.status(401).json({
                 success: false,
-                message: "Invalid webhook signature.",
+                message:
+                    "Invalid webhook signature.",
             });
         }
+
+        const event =
+            req.body?.event ||
+            req.body?.type;
+
+        const webhookData =
+            req.body?.data;
 
         console.log(
             "Valid Flutterwave webhook received."
@@ -52,8 +48,164 @@ export const handleFlutterwaveWebhook = async (
 
         console.log(
             "Webhook event:",
-            req.body?.event ||
-                req.body?.type
+            event
+        );
+
+        // We only process completed charges here.
+        if (event !== "charge.completed") {
+            return res.status(200).json({
+                success: true,
+                message:
+                    "Webhook received but not processed.",
+            });
+        }
+
+        if (!webhookData?.id) {
+            console.warn(
+                "charge.completed webhook is missing transaction ID."
+            );
+
+            return res.status(200).json({
+                success: true,
+            });
+        }
+
+        const transactionId =
+            webhookData.id;
+
+        const transaction =
+            await verifyFlutterwaveTransaction(
+                transactionId
+            );
+
+        // Verify the transaction status.
+        if (
+            transaction.status !==
+            "successful"
+        ) {
+            console.warn(
+                "Flutterwave transaction is not successful:",
+                transaction.status
+            );
+
+            return res.status(200).json({
+                success: true,
+            });
+        }
+
+        // Verify currency.
+        if (
+            transaction.currency !==
+            BILLING.pro.currency
+        ) {
+            console.warn(
+                "Invalid Flutterwave transaction currency:",
+                transaction.currency
+            );
+
+            return res.status(200).json({
+                success: true,
+            });
+        }
+
+        // Verify amount.
+        const paidAmount =
+            Number(transaction.amount);
+
+        const expectedAmount =
+            Number(BILLING.pro.amount);
+
+        if (
+            !Number.isFinite(paidAmount) ||
+            paidAmount < expectedAmount
+        ) {
+            console.warn(
+                "Insufficient Flutterwave payment amount:",
+                paidAmount
+            );
+
+            return res.status(200).json({
+                success: true,
+            });
+        }
+
+        // Verify this is a BizFlow Pro transaction.
+        const txRef =
+            transaction.tx_ref;
+
+        if (
+            !txRef ||
+            !txRef.startsWith(
+                "BIZFLOW-PRO-"
+            )
+        ) {
+            console.warn(
+                "Ignoring non-BizFlow transaction:",
+                txRef
+            );
+
+            return res.status(200).json({
+                success: true,
+            });
+        }
+
+        // Extract the BizFlow user ID from
+        // the transaction reference.
+        const userId =
+            txRef
+                .replace(
+                    "BIZFLOW-PRO-",
+                    ""
+                )
+                .split("-")[0];
+
+        const user =
+            await User.findById(userId);
+
+        if (!user) {
+            console.warn(
+                "BizFlow user not found for transaction:",
+                txRef
+            );
+
+            return res.status(200).json({
+                success: true,
+            });
+        }
+
+        // Idempotency check.
+        const alreadyProcessed =
+            user.subscription
+                ?.flutterwaveLastTransactionId ===
+            String(transaction.id);
+
+        if (alreadyProcessed) {
+            console.log(
+                "Flutterwave transaction already processed:",
+                transaction.id
+            );
+
+            return res.status(200).json({
+                success: true,
+                message:
+                    "Transaction already processed.",
+            });
+        }
+
+        await activateOrExtendProSubscription(
+            user,
+            transaction
+        );
+
+        console.log(
+            "BizFlow Pro subscription activated/extended:",
+            {
+                userId: user._id.toString(),
+                transactionId:
+                    transaction.id,
+                txRef:
+                    transaction.tx_ref,
+            }
         );
 
         return res.status(200).json({
@@ -61,13 +213,14 @@ export const handleFlutterwaveWebhook = async (
         });
     } catch (error) {
         console.error(
-            "Flutterwave webhook error:",
+            "Flutterwave webhook processing error:",
             error
         );
 
         return res.status(500).json({
             success: false,
-            message: "Webhook processing failed.",
+            message:
+                "Webhook processing failed.",
         });
     }
 };
