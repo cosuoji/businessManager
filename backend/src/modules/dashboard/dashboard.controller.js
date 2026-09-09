@@ -15,11 +15,16 @@ export const getSummary = async (
       endDate,
     } = req.query;
 
+    const includeComparison =
+      req.user.subscription?.plan ===
+      "pro";
+
     const result =
       await getDashboardSummary(
         req.user.id,
         startDate,
-        endDate
+        endDate,
+        includeComparison
       );
 
     return res.status(200).json({

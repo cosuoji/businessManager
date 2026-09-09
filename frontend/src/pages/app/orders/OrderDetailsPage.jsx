@@ -22,7 +22,7 @@ import {
 import useOrder from "../../../hooks/useOrder";
 
 import {
-    updateOrder,
+    updateOrder, archiveOrder
 } from "../../../services/orders";
 
 import Swal from "sweetalert2";
@@ -82,7 +82,10 @@ const OrderDetailsPage = () => {
     const [
         paymentError,
         setPaymentError,
-    ] = useState(null);
+  ] = useState(null);
+
+    const [processingOrderId, setProcessingOrderId] =
+        useState(null);
 
     const [
         deletingPaymentId,
@@ -121,7 +124,10 @@ const OrderDetailsPage = () => {
     const [
         editModalOpen,
         setEditModalOpen,
-    ] = useState(false);
+  ] = useState(false);
+
+    const [actionError, setActionError] =
+        useState(null);
 
     const [
         updatingOrder,
@@ -296,7 +302,46 @@ const OrderDetailsPage = () => {
             }
         };
 
-    if (loading) {
+    const handleArchive = async (orderId, orderNumber) => {
+        const result = await Swal.fire({
+            title: "Archive Order",
+            text: `Archive ${orderNumber}?`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Confirm Archive",
+            cancelButtonText: "Abort",
+            customClass: {
+                popup: "command-theme-popup",
+                confirmButton: "command-btn command-confirm-btn",
+                cancelButton: "command-btn command-cancel-btn",
+            },
+            buttonsStyling: false,
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        setProcessingOrderId(orderId);
+        setActionError(null);
+
+        try {
+            await archiveOrder(orderId);
+
+            navigate("/orders");
+        } catch (error) {
+            setActionError(
+                error.message || "Unable to archive order."
+            );
+        } finally {
+            setProcessingOrderId(null);
+        }
+  };
+
+
+
+
+  if (loading) {
         return (
             <div className="animate-pulse">
                 <div className="h-4 w-28 rounded bg-command-surface" />
@@ -432,18 +477,12 @@ const OrderDetailsPage = () => {
 
                     <button
                         type="button"
-                        onClick={() => {
-                            const confirmed =
-                                window.confirm(
-                                    "Archive this order?"
-                                );
-
-                            if (!confirmed) {
-                                return;
-                            }
-
-                            // Archive logic
-                        }}
+                        onClick={() =>
+                            handleArchive(
+                                order._id,
+                                order.orderNumber
+                            )
+                        }
                         className="inline-flex h-10 items-center gap-2 rounded-command-md border border-command-border px-4 text-sm text-command-muted transition hover:border-red-500/30 hover:text-red-400"
                     >
                         <Archive

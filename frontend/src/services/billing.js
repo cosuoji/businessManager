@@ -35,3 +35,10 @@ export const cancelSubscription =
             "/billing/subscription/cancel"
         );
     };
+
+export const resumeSubscription =
+    async () => {
+        return api.post(
+            "/billing/subscription/resume"
+        );
+    };

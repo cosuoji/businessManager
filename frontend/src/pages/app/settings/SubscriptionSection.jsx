@@ -2,10 +2,15 @@ import {
     Check,
     CreditCard,
     Crown,
+    Loader2,
     ArrowUpRight,
 } from "lucide-react";
+import { useState } from "react";
+
 
 import UpgradeButton from "../../../components/common/UpgradeButton"
+import { resumeSubscription, cancelSubscription } from "../../../services/billing"
+
 
 const formatDate = (date) => {
     if (!date) {
@@ -20,29 +25,74 @@ const formatDate = (date) => {
 };
 
 const SubscriptionSection = ({
-    user,
+  user,
+  onUpdated
 }) => {
-    const subscription = user?.subscription;
+  const [resuming, setResuming] = useState(false);
+  const [resumeError, setResumeError] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState("");
 
-    const plan = subscription?.plan || "free";
-    const status = subscription?.status || "active";
 
-    const isPro = plan === "pro";
+  const subscription = user?.subscription;
 
-    const cancelAtPeriodEnd =
-        Boolean(subscription?.cancelAtPeriodEnd);
+  const plan = subscription?.plan || "free";
+  const status = subscription?.status || "active";
 
-    const statusLabel = cancelAtPeriodEnd
-        ? "Cancellation scheduled"
-        : status === "active"
-            ? "Active"
-            : status.replace("_", " ");
+  const isPro = plan === "pro";
 
-    return (
-        <section className="overflow-hidden rounded-command-lg border border-command-border bg-command-surface">
-            <div className="border-b border-command-border px-5 py-4 sm:px-6">
-                <div className="flex items-center gap-2">
-                    <CreditCard
+  const cancelAtPeriodEnd =
+    Boolean(subscription?.cancelAtPeriodEnd);
+
+  const statusLabel = cancelAtPeriodEnd
+    ? "Cancellation scheduled"
+    : status === "active"
+      ? "Active"
+      : status.replace("_", " ");
+
+  const handleResumeSubscription = async () => {
+      setResuming(true);
+      setResumeError("");
+
+      try {
+          await resumeSubscription();
+
+          await onUpdated?.();
+      } catch (error) {
+          setResumeError(
+              error?.response?.data?.message ||
+              error?.message ||
+              "Unable to resume subscription."
+          );
+      } finally {
+          setResuming(false);
+      }
+  };
+
+  const handleCancelSubscription = async () => {
+      setCancelling(true);
+      setCancelError("");
+
+      try {
+          await cancelSubscription();
+
+          await onUpdated?.();
+      } catch (error) {
+          setCancelError(
+              error?.response?.data?.message ||
+              error?.message ||
+              "Unable to cancel subscription."
+          );
+      } finally {
+          setCancelling(false);
+      }
+  };
+
+  return (
+    <section className="overflow-hidden rounded-command-lg border border-command-border bg-command-surface">
+      <div className="border-b border-command-border px-5 py-4 sm:px-6">
+        <div className="flex items-center gap-2">
+          <CreditCard
                         size={14}
                         strokeWidth={1.5}
                         className="text-command-green"
@@ -174,31 +224,75 @@ const SubscriptionSection = ({
 
                                 <button
                                     type="button"
-                                    className="mt-3 text-xs font-medium text-command-green hover:underline"
+                                    onClick={handleResumeSubscription}
+                                    disabled={resuming}
+                                    className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-command-green transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    Resume subscription
+                                    {resuming ? (
+                                        <>
+                                            <Loader2
+                                                size={12}
+                                                className="animate-spin"
+                                            />
+                                            Resuming...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Resume subscription
+                                            <ArrowUpRight size={12} />
+                                        </>
+                                    )}
                                 </button>
+
+                                {resumeError && (
+                                    <p className="mt-2 text-[11px] text-red-400">
+                                        {resumeError}
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
                 </div>
 
                 {isPro && !cancelAtPeriodEnd && (
-                    <div className="mt-6 border-t border-command-border pt-5">
-                        <div className="flex items-start gap-3">
-                            <Check
-                                size={15}
-                                strokeWidth={1.5}
-                                className="mt-0.5 shrink-0 text-command-green"
-                            />
+                  <div className="mt-6 border-t border-command-border pt-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <Check
+                          size={15}
+                          strokeWidth={1.5}
+                          className="mt-0.5 shrink-0 text-command-green"
+                        />
 
-                            <p className="text-xs leading-5 text-command-muted">
-                                Your Pro subscription is active. You have
-                                access to all Pro features and your
-                                subscription will renew automatically.
-                            </p>
-                        </div>
+                        <p className="text-xs leading-5 text-command-muted">
+                          Your Pro subscription is active. You have access to all Pro features and your
+                          subscription will renew automatically.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleCancelSubscription}
+                        disabled={cancelling}
+                        className="shrink-0 text-xs font-medium text-red-400 transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {cancelling ? (
+                          <span className="inline-flex items-center gap-2">
+                            <Loader2 size={12} className="animate-spin" />
+                            Cancelling...
+                          </span>
+                        ) : (
+                          "Cancel subscription"
+                        )}
+                      </button>
                     </div>
+
+                    {cancelError && (
+                      <p className="mt-2 text-[11px] text-red-400">
+                        {cancelError}
+                      </p>
+                    )}
+                  </div>
                 )}
             </div>
         </section>

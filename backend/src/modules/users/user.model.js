@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
     businessName: {
       type: String,
       required: true,
@@ -131,7 +136,20 @@ const userSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+        flutterwaveLastFailedTransactionId: {
+            type: String,
+            default: null,
+        },
 
+        flutterwaveLastFailedTxRef: {
+            type: String,
+            default: null,
+        },
+
+        lastFailedPaymentAt: {
+            type: Date,
+            default: null,
+        },
         currentPeriodEnd: {
             type: Date,
             default: null,

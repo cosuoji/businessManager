@@ -1,5 +1,9 @@
 import express from "express";
+
 import { apiRateLimiter } from "../middleware/rateLimit.middleware.js";
+import { authenticate } from "../middleware/auth.js";
+import { refreshSubscriptionEntitlement } from "../modules/billing/subscription.middleware.js";
+import adminRoutes from "../modules/admin/admin.routes.js";
 
 import userRoutes from "../modules/users/user.routes.js";
 import customerRoutes from "../modules/customers/customer.routes.js";
@@ -24,17 +28,32 @@ router.get("/", (req, res) => {
   });
 });
 
+// --------------------------------------------------
+// Public routes
+// --------------------------------------------------
+
+
 router.use("/auth", userRoutes);
-router.use("/customers", apiRateLimiter, customerRoutes);
-router.use("/billing", apiRateLimiter, billingRoutes);
-router.use("/usage", apiRateLimiter, usageRoutes);
 router.use("/public/invoices", apiRateLimiter, invoicePublicRoutes);
-router.use("/orders", apiRateLimiter, orderRoutes);
-router.use("/payments", apiRateLimiter, paymentRoutes);
-router.use("/receipts", apiRateLimiter, receiptRoutes);
-router.use("/outstanding", apiRateLimiter, outstandingRoutes);
-router.use("/dashboard", apiRateLimiter, dashboardRoutes);
-router.use("/invoices", apiRateLimiter, invoiceRoutes);
-router.use("/whatsapp", apiRateLimiter, whatsappRoutes);
+
+router.use("/admin", adminRoutes);
+
+const protectedRouter = express.Router();
+protectedRouter.use(authenticate);
+protectedRouter.use(refreshSubscriptionEntitlement);
+
+
+protectedRouter.use("/customers", apiRateLimiter, customerRoutes);
+protectedRouter.use("/billing", apiRateLimiter, billingRoutes);
+protectedRouter.use("/usage", apiRateLimiter, usageRoutes);
+protectedRouter.use("/orders", apiRateLimiter, orderRoutes);
+protectedRouter.use("/payments", apiRateLimiter, paymentRoutes);
+protectedRouter.use("/receipts", apiRateLimiter, receiptRoutes);
+protectedRouter.use("/outstanding", apiRateLimiter, outstandingRoutes);
+protectedRouter.use("/dashboard", apiRateLimiter, dashboardRoutes);
+protectedRouter.use("/invoices", apiRateLimiter, invoiceRoutes);
+protectedRouter.use("/whatsapp", apiRateLimiter, whatsappRoutes);
+
+router.use(protectedRouter);
 
 export default router;

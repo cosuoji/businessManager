@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-const SITE_NAME = "Abeg Fix";
+const SITE_NAME = "BizFlow";
 const SITE_URL = "https://abegfix.com";
 const DEFAULT_IMAGE = `https://abegfix.com/assets/logo-eaDYfWcH.png`;
 

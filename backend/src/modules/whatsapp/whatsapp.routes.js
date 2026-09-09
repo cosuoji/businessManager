@@ -13,9 +13,6 @@ import {
   validateCustomerId,
 } from "./whatsapp.validation.js";
 
-import {
-  authenticate,
-} from "../../middleware/auth.js";
 
 import {
   requirePro,
@@ -25,7 +22,6 @@ import {
 const router =
   express.Router();
 
-router.use(authenticate);
 
 router.get(
   "/invoice/:orderId",

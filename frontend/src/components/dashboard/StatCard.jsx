@@ -2,9 +2,32 @@ const StatCard = ({
     label,
     value,
     meta,
+    comparison,
     icon: Icon,
     accent = false,
 }) => {
+    const changePercent =
+        comparison?.changePercent;
+
+    const hasComparison =
+        changePercent !== null &&
+        changePercent !== undefined;
+
+    const isPositive =
+        hasComparison &&
+        changePercent > 0;
+
+    const isNegative =
+        hasComparison &&
+        changePercent < 0;
+
+    const comparisonClass =
+        isPositive
+            ? "text-command-green"
+            : isNegative
+                ? "text-red-400"
+                : "text-command-muted";
+
     return (
         <div
             className={`group relative overflow-hidden rounded-command-lg border p-5 transition duration-300 ${
@@ -13,8 +36,6 @@ const StatCard = ({
                     : "border-command-border bg-command-surface"
             }`}
         >
-            {/* subtle glow */}
-
             {accent && (
                 <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-command-green/10 blur-3xl" />
             )}
@@ -44,6 +65,28 @@ const StatCard = ({
                 <p className="mt-5 text-2xl font-semibold tracking-tight text-command-white sm:text-3xl">
                     {value}
                 </p>
+
+                {hasComparison && (
+                    <p
+                        className={`mt-2 text-xs font-medium ${comparisonClass}`}
+                    >
+                        {isPositive && "↑ "}
+                        {isNegative && "↓ "}
+                        {changePercent === 0
+                            ? "0%"
+                            : `${Math.abs(
+                                  changePercent
+                              )}%`}{" "}
+                        vs previous period
+                    </p>
+                )}
+
+                {comparison &&
+                    !hasComparison && (
+                        <p className="mt-2 text-xs text-command-muted">
+                            No previous period data
+                        </p>
+                    )}
 
                 {meta && (
                     <p className="mt-2 text-xs text-command-muted">

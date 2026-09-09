@@ -155,6 +155,7 @@ const OrdersPage = () => {
                 setAddModalOpen(false);
 
                 await refetch();
+                await refreshUsage();
             } catch (error) {
                 setCreateError(
                     error.message ||

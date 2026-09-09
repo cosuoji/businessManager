@@ -13,16 +13,20 @@ import User from "./user.model.js";
 const isProduction =
   process.env.NODE_ENV === "production";
 
-const getCookieOptions = () => ({
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction
-    ? "none"
-    : "lax",
-  maxAge:
-    7 * 24 * 60 * 60 * 1000,
-  path: "/",
-});
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure: isProduction, // Must be true if sameSite is "none"
+    // CHANGE: If your frontend & backend share a domain (e.g., website.com),
+    // use "lax" for both. Only use "none" if they are completely different domains.
+    sameSite: isProduction ? "lax" : "lax",
+    // Alternative fix for Safari strict expiration caps:
+    maxAge: 7 * 24 * 60 * 60 * 1000 + 60000, // 7 days + 1 minute padding
+    path: "/",
+  };
+};
 
 
 export const register = async (req, res, next) => {

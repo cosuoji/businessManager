@@ -746,3 +746,131 @@ export const getOutstandingCustomers = async (
     },
   };
 };
+
+export const getOutstandingBreakdown = async (
+  userId
+) => {
+  const userObjectId =
+    new mongoose.Types.ObjectId(userId);
+
+  const now = new Date();
+
+  const dueSoonEnd = new Date(now);
+  dueSoonEnd.setDate(
+    dueSoonEnd.getDate() + 7
+  );
+
+  const orders =
+    await Order.aggregate([
+      {
+        $match: {
+          userId: userObjectId,
+
+          isArchived: false,
+
+          status: {
+            $ne: "cancelled",
+          },
+        },
+      },
+
+      {
+        $lookup: {
+          from: "payments",
+
+          localField: "_id",
+
+          foreignField: "orderId",
+
+          as: "payments",
+        },
+      },
+
+      {
+        $addFields: {
+          totalPaid: {
+            $sum: "$payments.amount",
+          },
+        },
+      },
+
+      {
+        $addFields: {
+          balance: {
+            $subtract: [
+              "$total",
+              "$totalPaid",
+            ],
+          },
+        },
+      },
+
+      {
+        $match: {
+          balance: {
+            $gt: 0,
+          },
+        },
+      },
+
+      {
+        $project: {
+          balance: 1,
+          dueDate: 1,
+        },
+      },
+    ]);
+
+  let totalOutstanding = 0;
+  let overdue = 0;
+  let dueSoon = 0;
+  let notDue = 0;
+
+  let overdueOrderCount = 0;
+  let dueSoonOrderCount = 0;
+  let notDueOrderCount = 0;
+
+  for (const order of orders) {
+    const balance =
+      order.balance || 0;
+
+    totalOutstanding += balance;
+
+    if (
+      order.dueDate &&
+      new Date(order.dueDate) < now
+    ) {
+      overdue += balance;
+      overdueOrderCount++;
+    } else if (
+      order.dueDate &&
+      new Date(order.dueDate) <=
+        dueSoonEnd
+    ) {
+      dueSoon += balance;
+      dueSoonOrderCount++;
+    } else {
+      notDue += balance;
+      notDueOrderCount++;
+    }
+  }
+
+  return {
+    totalOutstanding,
+
+    overdue: {
+      amount: overdue,
+      orderCount: overdueOrderCount,
+    },
+
+    dueSoon: {
+      amount: dueSoon,
+      orderCount: dueSoonOrderCount,
+    },
+
+    notDue: {
+      amount: notDue,
+      orderCount: notDueOrderCount,
+    },
+  };
+};

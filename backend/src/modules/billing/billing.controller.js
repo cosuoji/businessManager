@@ -1,9 +1,10 @@
 import {
     createBillingCheckout,
     verifyProPayment,
-  getProSubscription,
+    getProSubscription,
     cancelProSubscription,
     syncFlutterwaveSubscription,
+    resumeProSubscription,
 } from "./billing.service.js";
 
 export const initializeProCheckout = async (
@@ -124,6 +125,21 @@ export const cancelSubscription = async (
                 result.subscription,
             flutterwave:
                 result.flutterwave,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+export const resumeSubscription = async (req, res, next) => {
+    try {
+        const subscription = await resumeProSubscription(
+            req.user.id
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Subscription resumed successfully.",
+            subscription,
         });
     } catch (error) {
         next(error);

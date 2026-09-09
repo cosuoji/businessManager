@@ -11,11 +11,7 @@ import {
   validateDashboardPagination,
 } from "./dashboard.validation.js";
 
-import { authenticate } from "../../middleware/auth.js";
-
 const router = express.Router();
-
-router.use(authenticate);
 
 // GET /api/v1/dashboard
 router.get(

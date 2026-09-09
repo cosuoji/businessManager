@@ -452,8 +452,12 @@ export const activateOrExtendProSubscription = async (
         currentPeriodEnd &&
         currentPeriodEnd > now;
 
-    // Existing active subscription with no
-    // recorded start date.
+    /*
+     * Existing active subscription with a missing
+     * period start date.
+     *
+     * Infer the start from the current period end.
+     */
     if (
         hasActivePeriod &&
         !currentPeriodStart
@@ -466,7 +470,14 @@ export const activateOrExtendProSubscription = async (
         );
     }
 
-    // No active subscription period.
+    /*
+     * No active billing period.
+     *
+     * This covers:
+     * - first Pro payment
+     * - expired subscription
+     * - previously free user
+     */
     if (!hasActivePeriod) {
         currentPeriodStart =
             new Date(now);
@@ -478,15 +489,21 @@ export const activateOrExtendProSubscription = async (
             currentPeriodEnd.getMonth() + 1
         );
     } else {
-        // Existing active period:
-        // extend from its current end.
+        /*
+         * Existing active billing period.
+         *
+         * A successful recurring payment extends
+         * from the existing period end.
+         */
+        currentPeriodEnd =
+            new Date(currentPeriodEnd);
+
         currentPeriodEnd.setMonth(
             currentPeriodEnd.getMonth() + 1
         );
     }
 
     user.subscription.plan = "pro";
-
     user.subscription.status = "active";
 
     user.subscription.currentPeriodStart =
@@ -498,11 +515,10 @@ export const activateOrExtendProSubscription = async (
     user.subscription.flutterwavePlanId =
         process.env.FLUTTERWAVE_PRO_PLAN_ID;
 
-    user.subscription.flutterwaveCustomerId =
-        transaction.customer?.id
-            ? String(transaction.customer.id)
-            : user.subscription
-                .flutterwaveCustomerId;
+    if (transaction.customer?.id) {
+        user.subscription.flutterwaveCustomerId =
+            String(transaction.customer.id);
+    }
 
     user.subscription.cancelAtPeriodEnd =
         false;
@@ -523,7 +539,6 @@ export const activateOrExtendProSubscription = async (
 
     return user.subscription;
 };
-
 
 export const verifyFlutterwaveTransaction =
     async (transactionId) => {
@@ -955,4 +970,191 @@ export const getProSubscription = async (
         flutterwave:
             flutterwaveSubscription,
     };
+};
+
+export const markSubscriptionPastDue = async (
+    user,
+    transaction
+) => {
+    if (!user) {
+        const error = new Error(
+            "User account not found."
+        );
+
+        error.statusCode = 404;
+        error.code = "USER_NOT_FOUND";
+
+        throw error;
+    }
+
+    /*
+     * Only Pro subscriptions can become past due.
+     */
+    if (
+        user.subscription?.plan !==
+        "pro"
+    ) {
+        return user.subscription;
+    }
+
+    const now = new Date();
+
+    user.subscription.status =
+        "past_due";
+
+    /*
+     * Keep the existing paid period intact.
+     *
+     * We do NOT change:
+     * - currentPeriodStart
+     * - currentPeriodEnd
+     * - plan
+     */
+    user.subscription.lastFailedPaymentAt =
+        now;
+
+    user.subscription
+        .flutterwaveLastFailedTransactionId =
+        String(transaction.id);
+
+    user.subscription
+        .flutterwaveLastFailedTxRef =
+        transaction.tx_ref || null;
+
+    await user.save();
+
+    return user.subscription;
+};
+
+export const expireSubscriptionIfNeeded = async (user) => {
+    if (!user) {
+        const error = new Error(
+            "User account not found."
+        );
+
+        error.statusCode = 404;
+        error.code = "USER_NOT_FOUND";
+
+        throw error;
+    }
+
+    const subscription = user.subscription;
+
+    if (subscription?.plan !== "pro") {
+        return {
+            expired: false,
+            subscription,
+        };
+    }
+
+    if (!subscription.currentPeriodEnd) {
+        return {
+            expired: false,
+            subscription,
+        };
+    }
+
+    const now = new Date();
+
+    const currentPeriodEnd = new Date(
+        subscription.currentPeriodEnd
+    );
+
+    if (currentPeriodEnd > now) {
+        return {
+            expired: false,
+            subscription,
+        };
+    }
+
+    subscription.plan = "free";
+    subscription.status = "expired";
+    subscription.cancelAtPeriodEnd = false;
+
+    if (!subscription.cancelledAt) {
+        subscription.cancelledAt = now;
+    }
+
+    await user.save();
+
+    return {
+        expired: true,
+        subscription: user.subscription,
+    };
+};
+
+export const resumeProSubscription = async (userId) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        const error = new Error("User account not found.");
+        error.statusCode = 404;
+        error.code = "USER_NOT_FOUND";
+        throw error;
+    }
+
+    const subscription = user.subscription;
+
+    if (subscription?.plan !== "pro") {
+        const error = new Error(
+            "Only Pro subscriptions can be resumed."
+        );
+        error.statusCode = 400;
+        error.code = "NOT_PRO";
+        throw error;
+    }
+
+    if (!subscription?.cancelAtPeriodEnd) {
+        const error = new Error(
+            "This subscription is not scheduled for cancellation."
+        );
+        error.statusCode = 400;
+        error.code = "SUBSCRIPTION_NOT_CANCELLED";
+        throw error;
+    }
+
+    if (!subscription?.flutterwaveSubscriptionId) {
+        const error = new Error(
+            "Flutterwave subscription ID is missing."
+        );
+        error.statusCode = 400;
+        error.code = "FLUTTERWAVE_SUBSCRIPTION_ID_MISSING";
+        throw error;
+    }
+
+    const response = await fetch(
+        `${FLUTTERWAVE_API}/subscriptions/${subscription.flutterwaveSubscriptionId}/activate`,
+        {
+            method: "PUT",
+            headers: getFlutterwaveHeaders(),
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || data?.status !== "success") {
+        console.error(
+            "Flutterwave subscription resume failed:",
+            data
+        );
+
+        const error = new Error(
+            data?.message ||
+            "Unable to resume Flutterwave subscription."
+        );
+
+        error.statusCode = 400;
+        error.code = "FLUTTERWAVE_RESUME_FAILED";
+
+        throw error;
+    }
+
+    // Resume local subscription state.
+    user.subscription.status = "active";
+    user.subscription.cancelAtPeriodEnd = false;
+    user.subscription.cancelledAt = null;
+
+    await user.save();
+
+    return user.subscription;
 };

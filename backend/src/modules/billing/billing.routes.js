@@ -6,20 +6,19 @@ import {
     getSubscription,
     syncSubscription,
     cancelSubscription,
+    resumeSubscription
 } from "./billing.controller.js";
 import {
     handleFlutterwaveWebhook,
 } from "./billing.webhook.js";
 
-import { authenticate } from "../../middleware/auth.js";
+
 const router = express.Router();
 
 router.post(
     "/webhook",
     handleFlutterwaveWebhook
 );
-
-router.use(authenticate);
 
 router.post(
     "/checkout",
@@ -46,5 +45,9 @@ router.post(
     cancelSubscription
 );
 
+router.post(
+    "/subscription/resume",
+    resumeSubscription
+);
 
 export default router;

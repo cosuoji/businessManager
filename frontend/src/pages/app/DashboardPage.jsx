@@ -7,12 +7,19 @@ import {
     ArrowUpRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, useMemo, useEffect } from "react";
+import { useState } from "react";
 
 import StatCard from "../../components/dashboard/StatCard";
 import DashboardHeader from "../../components/dashboard/DashboardHeader";
 import RecentActivity from "../../components/dashboard/RecentActivity";
 import useDashboard from "../../hooks/useDashboard";
+import DashboardTrendChart from "../../components/dashboard/DashboardTrendCharts";
+import OutstandingBreakdown from "../../components/dashboard/OutstandingBreakdown";
+import TopCustomers from "../../components/dashboard/TopCustomers";
+import CollectionMetrics from "../../components/dashboard/CollectionMetrics";
+import CustomerGrowth from "../../components/dashboard/CustomerGrowth";
+
+
 
 const formatCurrency = (
     amount = 0
@@ -210,15 +217,45 @@ const DashboardPage = () => {
     return (
         <div>
           <DashboardHeader
-            startDate={data?.dateRange?.startDate}
-            endDate={data?.dateRange?.endDate}
-            period={period}
-            onPeriodChange={handlePeriodChange}
-            customStartDate={customStartDate}
-            customEndDate={customEndDate}
-            onCustomStartDateChange={setCustomStartDate}
-            onCustomEndDateChange={setCustomEndDate}
-          />
+              startDate={data?.dateRange?.startDate}
+              endDate={data?.dateRange?.endDate}
+              period={period}
+              onPeriodChange={handlePeriodChange}
+              customStartDate={customStartDate}
+              customEndDate={customEndDate}
+              onCustomStartDateChange={setCustomStartDate}
+              onCustomEndDateChange={setCustomEndDate}
+        />
+        {data?.comparison?.period?.previous && (
+            <div className="mb-4 flex items-center gap-2">
+                <span className="rounded-full border border-command-border px-2.5 py-1 font-mono text-[9px] uppercase tracking-wider text-command-muted">
+                    Pro
+                </span>
+
+                <p className="text-xs text-command-muted">
+                    Compared with{" "}
+                    {new Date(
+                        data.comparison.period.previous.startDate
+                    ).toLocaleDateString(
+                        "en-NG",
+                        {
+                            day: "numeric",
+                            month: "short",
+                        }
+                    )}{" "}
+                    –{" "}
+                    {new Date(
+                        data.comparison.period.previous.endDate
+                    ).toLocaleDateString(
+                        "en-NG",
+                        {
+                            day: "numeric",
+                            month: "short",
+                        }
+                    )}
+                </p>
+            </div>
+        )}
 
             {/* STATS */}
 
@@ -232,7 +269,10 @@ const DashboardPage = () => {
                         orderCount === 1
                             ? "order"
                             : "orders"
-                    }`}
+              }`}
+                    comparison={
+                         data?.comparison?.sales
+                     }
                     icon={Banknote}
                     accent
                 />
@@ -241,6 +281,9 @@ const DashboardPage = () => {
                     label="Orders"
                     value={orderCount}
                     meta="Orders created"
+                    comparison={
+                        data?.comparison?.orders
+                    }
                     icon={ShoppingBag}
                 />
 
@@ -255,6 +298,9 @@ const DashboardPage = () => {
                             ? "payment"
                             : "payments"
                     } recorded`}
+                    comparison={
+                        data?.comparison?.payments
+                    }
                     icon={Wallet}
                 />
 
@@ -264,11 +310,93 @@ const DashboardPage = () => {
                         estimatedProfit
                     )}
                     meta="Based on product costs"
+                    comparison={
+                        data?.comparison?.profit
+                    }
                     icon={TrendingUp}
                 />
-            </div>
+        </div>
 
-            {/* SECONDARY INFORMATION */}
+        {/* Trends */}
+        {data?.trends && (
+            <div className="mt-6">
+                <div className="mb-4 flex items-center gap-2">
+                    <span className="rounded-full border border-command-border px-2.5 py-1 font-mono text-[9px] uppercase tracking-wider text-command-muted">
+                        Pro
+                    </span>
+
+                    <p className="text-xs text-command-muted">
+                        Performance trends for this period
+                    </p>
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-2">
+                    <DashboardTrendChart
+                        title="Sales trend"
+                        description="Sales generated over the selected period."
+                        data={data.trends}
+                        dataKey="sales"
+                    />
+
+                    <DashboardTrendChart
+                        title="Estimated profit trend"
+                        description="Estimated profit based on product costs."
+                        data={data.trends}
+                        dataKey="estimatedProfit"
+                    />
+                </div>
+            </div>
+        )}
+
+        {(data?.outstandingBreakdown ||
+            data?.topCustomers) && (
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                {data?.outstandingBreakdown && (
+                    <OutstandingBreakdown
+                        data={
+                            data.outstandingBreakdown
+                        }
+                    />
+                )}
+
+                {data?.topCustomers && (
+                    <TopCustomers
+                        customers={
+                            data.topCustomers
+                        }
+                    />
+                )}
+            </div>
+          )}
+
+        {/* Collection Metrics */}
+        {(data?.collectionMetrics ||
+            data?.averageOrderValue) && (
+            <div className="mt-6">
+                <CollectionMetrics
+                    collection={
+                        data.collectionMetrics
+                    }
+                    averageOrder={
+                        data.averageOrderValue
+                    }
+                />
+            </div>
+          )}
+
+        {/* Customer Growth */}
+
+        {(data?.customerGrowth) && (
+            <div className="mt-6">
+                <CustomerGrowth
+                    data={
+                        data.customerGrowth
+                    }
+                />
+            </div>
+        )}
+
+        {/* INFORMATION */}
 
             <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
                 {/* SALES PANEL */}
@@ -277,7 +405,7 @@ const DashboardPage = () => {
                     <div className="flex items-center justify-between border-b border-command-border px-5 py-4">
                         <div>
                             <p className="text-sm font-medium">
-                                Today's activity
+                               Activity
                             </p>
 
                             <p className="mt-1 text-xs text-command-muted">
