@@ -43,7 +43,10 @@ const BusinessProfileSection = ({
             businessAddress:
                 user.businessAddress || "",
             currency:
-                user.currency || "NGN",
+            user.currency || "NGN",
+            invoiceNotes:
+                user.settings?.invoiceNotes || "",
+
         });
 
     const [saving, setSaving] =
@@ -71,7 +74,6 @@ const BusinessProfileSection = ({
         setSuccess(false);
         setError(null);
     };
-
     const handleSubmit = async (
         event
     ) => {
@@ -91,6 +93,10 @@ const BusinessProfileSection = ({
                     form.businessAddress,
                 currency:
                     form.currency,
+                settings: {
+                    invoiceNotes:
+                        form.invoiceNotes,
+                },
             });
 
             await onUpdated();
@@ -240,7 +246,29 @@ const BusinessProfileSection = ({
                             rows={3}
                             className="w-full resize-none rounded-command-md border border-command-border bg-command-black px-3 py-2.5 text-sm outline-none transition placeholder:text-command-muted/50 focus:border-command-green/40"
                         />
-                    </div>
+            </div>
+            <div className="sm:col-span-2">
+                <label
+                    htmlFor="invoiceNotes"
+                    className="mb-2 block text-xs font-medium"
+                >
+                    Invoice notes (Payment Details and other notes)
+                </label>
+
+                <textarea
+                    id="invoiceNotes"
+                    name="invoiceNotes"
+                    value={
+                        form.invoiceNotes
+                    }
+                    onChange={
+                        handleChange
+                    }
+                    maxLength={300}
+                    rows={3}
+                    className="w-full resize-none rounded-command-md border border-command-border bg-command-black px-3 py-2.5 text-sm outline-none transition placeholder:text-command-muted/50 focus:border-command-green/40"
+                />
+            </div>
                 </div>
 
                 {error && (

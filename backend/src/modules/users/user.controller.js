@@ -138,6 +138,7 @@ export const getCurrentUser = async (req, res, next) => {
         currency: user.currency,
         settings: user.settings,
         subscription: user.subscription,
+        role: user.role,
       },
     });
   } catch (error) {

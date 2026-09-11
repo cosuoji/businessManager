@@ -67,6 +67,7 @@ export const generateInvoiceHTML = (
     paymentStatus,
     currency,
     notes,
+    invoiceNotes,
   } = invoice;
 
   const itemRows = items
@@ -281,6 +282,16 @@ export const generateInvoiceHTML = (
     .notes-title {
       font-weight: 700;
       margin-bottom: 5px;
+    }
+
+    .invoice-notes {
+      margin-top: 10px;
+      padding: 10px;
+
+      background: #f7f7f7;
+      border-radius: 4px;
+
+      font-size: 14px;
     }
 
     .footer {
@@ -533,6 +544,22 @@ export const generateInvoiceHTML = (
         `
         : ""
     }
+
+    <div class="invoice-notes">
+      ${
+        invoiceNotes
+          ? `
+            <div class="notes-title">
+              Invoice Notes
+            </div>
+
+            <div>
+              ${escapeHTML(invoiceNotes)}
+            </div>
+          `
+          : ""
+      }
+    </div>
 
     <div class="footer">
       Thank you for your business.

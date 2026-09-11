@@ -85,6 +85,16 @@ const orderSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    currency: {
+      type: String,
+      enum: [
+        "NGN",
+        "USD",
+        "GBP",
+        "EUR",
+      ],
+      default: "NGN",
+    },
 
     total: {
       type: Number,

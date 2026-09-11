@@ -38,7 +38,21 @@ export const createBillingCheckout = async (
     const currentPlan =
         user.subscription?.plan || "free";
 
-    if (currentPlan === "pro") {
+    if (
+      user.subscription?.plan === "pro" &&
+      user.subscription?.source === "admin"
+    ) {
+      const error = new Error(
+        "Your Pro access is currently managed by an administrator."
+      );
+
+      error.statusCode = 400;
+      error.code = "ADMIN_MANAGED_PRO";
+
+      throw error;
+    }
+
+  if (currentPlan === "pro") {
         const error = new Error(
             "Your account is already on the Pro plan."
         );
@@ -171,6 +185,20 @@ export const verifyProPayment = async (
         error.statusCode = 404;
 
         throw error;
+  }
+
+    if (
+      user.subscription?.plan === "pro" &&
+      user.subscription?.source === "admin"
+    ) {
+      const error = new Error(
+        "Your Pro access is currently managed by an administrator."
+      );
+
+      error.statusCode = 400;
+      error.code = "ADMIN_MANAGED_PRO";
+
+      throw error;
     }
 
     if (
@@ -504,7 +532,8 @@ export const activateOrExtendProSubscription = async (
     }
 
     user.subscription.plan = "pro";
-    user.subscription.status = "active";
+  user.subscription.status = "active";
+   user.subscription.source = "flutterwave";
 
     user.subscription.currentPeriodStart =
         currentPeriodStart;
@@ -606,6 +635,20 @@ export const cancelProSubscription = async (
         user.subscription;
 
     if (
+      user.subscription?.plan === "pro" &&
+      user.subscription?.source === "admin"
+    ) {
+      const error = new Error(
+        "Your Pro access is currently managed by an administrator."
+      );
+
+      error.statusCode = 400;
+      error.code = "ADMIN_MANAGED_PRO";
+
+      throw error;
+    }
+
+  if (
         !subscription ||
         subscription.plan !== "pro"
     ) {
@@ -789,6 +832,20 @@ export const syncFlutterwaveSubscription = async (
         error.statusCode = 404;
 
         throw error;
+  }
+
+    if (
+      user.subscription?.plan === "pro" &&
+      user.subscription?.source === "admin"
+    ) {
+      const error = new Error(
+        "Your Pro access is currently managed by an administrator."
+      );
+
+      error.statusCode = 400;
+      error.code = "ADMIN_MANAGED_PRO";
+
+      throw error;
     }
 
     if (
@@ -1093,7 +1150,21 @@ export const resumeProSubscription = async (userId) => {
         throw error;
     }
 
-    const subscription = user.subscription;
+  const subscription = user.subscription;
+
+  if (
+    user.subscription?.plan === "pro" &&
+    user.subscription?.source === "admin"
+  ) {
+    const error = new Error(
+      "Your Pro access is currently managed by an administrator."
+    );
+
+    error.statusCode = 400;
+    error.code = "ADMIN_MANAGED_PRO";
+
+    throw error;
+  }
 
     if (subscription?.plan !== "pro") {
         const error = new Error(

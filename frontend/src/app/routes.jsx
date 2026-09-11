@@ -30,8 +30,20 @@ import BillingCallbackPage from "../pages/app/billing/BillingCallbackPage";
 
 
 
-
+// Protected Routes
 import ProtectedRoute from "../components/auth/ProtectedRoute";
+
+//Admin
+import AdminRoute from "../components/auth/AdminRoute";
+import AdminLayout from "../components/layout/AdminLayout";
+
+import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
+import AdminAuditLogsPage from "../pages/admin/AdminAuditLogsPage";
+import AdminUsersPage from "../pages/admin/AdminUsersPage";
+import AdminUserPage from "../pages/admin/AdminUserDetailPage";
+import AdminUserDetailPage from "../pages/admin/AdminUserDetailPage";
+
+
 
 
 const router = createBrowserRouter([
@@ -142,6 +154,30 @@ const router = createBrowserRouter([
 
             },
         ],
+  },
+  {
+    element: <AdminRoute />,
+    children: [{
+      element: <AdminLayout />,
+      children: [
+        {
+          path: "/admin",
+          element: <AdminDashboardPage />,
+        },
+        {
+          path: "/admin/audit-logs",
+          element: <AdminAuditLogsPage />,
+        },
+        {
+          path: "/admin/users",
+          element: <AdminUsersPage />,
+        },
+        {
+          path: "/admin/users/:id",
+          element: <AdminUserDetailPage />,
+        },
+      ],
+    }],
   },
     {
         path: "*",

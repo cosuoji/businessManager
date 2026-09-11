@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
+import User from "../modules/users/user.model.js";
 
-export const authenticate = (req, res, next) => {
+
+export const authenticate = async (req, res, next) => {
   try {
     const token = req.cookies[process.env.COOKIE_NAME];
 
@@ -19,6 +21,15 @@ export const authenticate = (req, res, next) => {
       id: decoded.userId,
     };
 
+    const user = await User.findById(decoded.userId);
+
+    if (user && user.accountStatus === "suspended") {
+      const error = new Error("Your account has been suspended.");
+      error.statusCode = 403;
+      error.code = "ACCOUNT_SUSPENDED";
+      throw error;
+
+    }
     next();
   } catch (error) {
     if (error.name === "JsonWebTokenError") {

@@ -40,6 +40,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: 300,
     },
+    accountStatus: {
+      type: String,
+      enum: ["active", "suspended"],
+      default: "active",
+    },
     currency: {
       type: String,
       enum: [
@@ -105,7 +110,12 @@ const userSchema = new mongoose.Schema(
                 "expired",
             ],
             default: "active",
-        },
+      },
+      source: {
+        type: String,
+        enum: ["flutterwave", "admin"],
+        default: "flutterwave",
+      },
 
         flutterwavePlanId: {
             type: String,

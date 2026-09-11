@@ -335,7 +335,7 @@ export const getInvoiceData = async (
 
     User.findById(userId)
       .select(
-        "name email phone businessName businessPhone businessAddress currency"
+        "name email phone businessName businessPhone businessAddress currency settings"
       )
       .lean(),
 
@@ -443,6 +443,8 @@ export const getInvoiceData = async (
 
       notes:
           order.notes || "",
+      invoiceNotes:
+          user.settings?.invoiceNotes || "",
   };
 };
 
